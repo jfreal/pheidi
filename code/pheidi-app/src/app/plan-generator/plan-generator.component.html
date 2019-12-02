@@ -1,6 +1,61 @@
-<p>
-  plan-generator works!
-</p>
+<div class="row">
+  <div class="col-6">
+    <form>
+      <div class="form-group">
+        <label for="exampleFormControlSelect1">Long Run Day</label>
+        <select class="form-control form-control-sm" name="longRunDay" [(ngModel)]="trainingPlan.longRunDay">
+          <option [value]="0">Monday</option>
+          <option [value]="1">Tuesday</option>
+          <option [value]="2">Wednesday</option>
+          <option [value]="3">Thursday</option>
+          <option [value]="4">Friday</option>
+          <option [value]="5">Saturday</option>
+          <option [value]="6">Sunday</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="exampleInputPassword1">Password</label>
+        <input type="password" class="form-control form-control-sm" id="exampleInputPassword1" placeholder="Password">
+      </div>
+      <div class="form-group form-check">
+        <input type="checkbox" class="form-check-input " id="exampleCheck1">
+        <label class="form-check-label" for="exampleCheck1">Check me out</label>
+      </div>
+      <button type="submit" class="btn btn-primary">Submit</button>
+    </form>
 
-<h3>asdf</h3>
-asdf
+
+  </div>
+  <div class="col-6">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th>Mon</th>
+          <th>Tue</th>
+          <th>Wed</th>
+          <th>Thu</th>
+          <th>Fri</th>
+          <th>Sat</th>
+          <th>Sun</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let week of trainingPlan.generatedWeeks">
+          <td>{{week.weekNumber}}</td>
+          <td>{{week.days[0].distance}}</td>
+          <td>{{week.days[1].distance}}</td>
+          <td>{{week.days[2].distance}}</td>
+          <td>{{week.days[3].distance}}</td>
+          <td>{{week.days[4].distance}}</td>
+          <td>{{week.days[5].distance}}</td>
+          <td>{{week.days[6].distance}}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<pre>
+  {{trainingPlan | json}}
+</pre>
