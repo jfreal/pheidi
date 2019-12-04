@@ -62,19 +62,33 @@ export class TrainingPlan {
             weeks.unshift(week);
         }
 
+        let halfWay: number = this.numberOfWeeks - this.weeksOfTaper;
         for (let i = 0; i < this.weeksOfTaper; i++) {
 
             let halfOfTheLongestRun = (this.lastLongRunDistance / 2);
+
             let midWeekRun = halfOfTheLongestRun - ((i + 1) * 2);
 
-            console.log(midWeekRun);
 
             // var taperDistance = Math.floor(lastLongRunWeek / 2) + 1;
 
             // let indexOfWeekToClone = Math.floor((lastLongRunWeek / 2) - 1);
             // var weekToClone = weeks[indexOfWeekToClone];
 
-            weeks[this.numberOfWeeks - i - 1].days[2].distance = midWeekRun;
+            halfWay = Math.floor(halfWay / 2);
+
+            console.log(halfWay)
+
+            let halfWayWeek = weeks[halfWay - 1];
+
+            let taperWeek = weeks[this.numberOfWeeks - this.weeksOfTaper + i];
+
+            taperWeek.days[2].distance = midWeekRun;
+
+            taperWeek.days[1].distance = Math.floor(midWeekRun / 2) + 1;
+            taperWeek.days[3].distance = Math.floor(midWeekRun / 2);
+
+            taperWeek.days[this.longRunDay].distance = halfWayWeek.days[this.longRunDay].distance;
         }
 
         if (this.marathonDate) {
