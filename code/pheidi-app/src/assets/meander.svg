@@ -3,7 +3,7 @@
       line,
       polyline {
         fill: none;
-        stroke: #CDB599;
+        stroke: #F2DDB6;
         stroke-width: 2.5;
       }
 

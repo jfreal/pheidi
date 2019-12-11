@@ -1,5 +1,72 @@
-<div class="row">
+<div class="row mt-4">
   <div class="col-6">
+    <h4><i class="fas fa-cogs"></i> Settings</h4>
+
+    <table class="table table-sm dropdowns">
+      <tr>
+        <th>Week</th>
+        <th>Mon</th>
+        <th>Tue</th>
+        <th>Wed</th>
+        <th>Thu</th>
+        <th>Fri</th>
+        <th>Sat</th>
+        <th>Sun</th>
+      </tr>
+      <tr>
+        <td>Dist</td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day></app-type-of-day>
+        </td>
+      </tr>
+      <tr class="dropdowns">
+        <td>Type</td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[0].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[1].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[2].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[3].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[4].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[5].dayType"></app-type-of-day>
+        </td>
+        <td>
+          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[6].dayType"></app-type-of-day>
+        </td>
+      </tr>
+      <tr>
+
+      </tr>
+    </table>
+
+
     <form>
       <div class="form-group">
         <label for="exampleFormControlSelect1">Long Run Day</label>
@@ -27,6 +94,7 @@
 
   </div>
   <div class="col-6">
+    <h4><i class="fas fa-scroll"></i> Training Plan</h4>
     <table class="table">
       <thead>
         <tr>
@@ -38,6 +106,7 @@
           <th>Fri</th>
           <th>Sat</th>
           <th>Sun</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -50,6 +119,7 @@
           <td>{{week.days[4].distance}}</td>
           <td>{{week.days[5].distance}}</td>
           <td>{{week.days[6].distance}}</td>
+          <td></td>
         </tr>
       </tbody>
     </table>

@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
-import { TrainingPlan } from './training-plan'
+import { TrainingPlan } from '../training-plan'
+import { DayConfig } from '../day-config';
 
 @Component({
   selector: 'app-plan-generator',

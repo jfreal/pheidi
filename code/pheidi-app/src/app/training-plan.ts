@@ -1,6 +1,11 @@
 import { Week } from './week';
+import { DayConfig } from './day-config';
+import { DayType } from './day-type.enum';
+import { DistanceType } from './distance-type.enum';
 
 export class TrainingPlan {
+
+    dayConfigs: DayConfig[];
     marathonDate: Date;
     numberOfWeeks: number = 18;
     generatedWeeks: Week[];
@@ -8,13 +13,25 @@ export class TrainingPlan {
     lastLongRunDistance: number = 20;
     longRunDay: number = 6;
     minimumRunDistance: number = 3;
+
+    constructor() {
+        this.dayConfigs = [
+            new DayConfig(DistanceType.None, DayType.Rest),
+            new DayConfig(DistanceType.Quarter, DayType.Run),
+            new DayConfig(DistanceType.Half, DayType.Run),
+            new DayConfig(DistanceType.Quarter, DayType.Run),
+            new DayConfig(DistanceType.None, DayType.Rest),
+            new DayConfig(DistanceType.Long, DayType.Run),
+            new DayConfig(DistanceType.None, DayType.Cross)
+        ]
+    }
+
+
     GeneratePlanWeeks() {
 
         let weeks: Array<Week> = [];
 
         let lastLongRunWeek = this.numberOfWeeks - this.weeksOfTaper;
-
-        console.log(this.numberOfWeeks)
 
         for (let i = this.numberOfWeeks - 1; i >= 0; i--) {
 
@@ -50,11 +67,10 @@ export class TrainingPlan {
 
             //mid week generation
             if (week.weekNumber == lastLongRunWeek) {
-                week.days[2].distance = Math.ceil((this.lastLongRunDistance / 2));
-                week.days[1].distance = Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance);
-                week.days[3].distance = Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance);
+                week.halfRunDistance = Math.ceil((this.lastLongRunDistance / 2));
+                week.quarterRunDistance = Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance);
             } else {
-                week.days[2].distance = Math.ceil((week.weekNumber / 2) + 2);
+                week.halfRunDistance = Math.ceil((week.weekNumber / 2) + 2);
                 week.days[1].distance = Math.max(Math.floor(week.days[2].distance / 2), this.minimumRunDistance);
                 week.days[3].distance = Math.max(Math.ceil(week.days[2].distance / 2), this.minimumRunDistance);
             }

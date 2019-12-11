@@ -1,0 +1,11 @@
+<div class="btn-group">
+  <button class="btn btn-type dropdown-toggle border" type="button" data-toggle="dropdown" aria-haspopup="true"
+    aria-expanded="false">
+    <i class="{{DayTypeIconMapping[selectedDayType]}}"></i>
+  </button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="#" *ngFor="let dayType of dayTypes">
+      <i [ngClass]="DayTypeIconMapping[dayType]" style="width: 25px;"></i>{{dayType}}</a>
+    <!-- {{dayTypes}} -->
+  </div>
+</div>

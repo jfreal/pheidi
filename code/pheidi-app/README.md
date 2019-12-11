@@ -5,6 +5,9 @@ This project was generated with [Angular CLI](https://github.com/angular/angular
 SVG Border
 http://thenewcode.com/1064/Classical-Greek-Geometric-Borders-In-SVG
 
+Font: 
+https://www.1001fonts.com/cinzel-font.html
+
 ## Development server
 
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
