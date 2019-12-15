@@ -12,10 +12,16 @@ export class PlanGeneratorComponent implements OnInit {
 
   constructor() { }
 
-  ngOnInit() {
+  changeDayType(dayIndex, dayType) {
+    this.trainingPlan.dayConfigs[dayIndex].dayType = dayType;
+  }
 
+  changeDistanceType(dayIndex, distanceType) {
+    this.trainingPlan.dayConfigs[dayIndex].distanceType = distanceType;
+  }
+
+  ngOnInit() {
     this.trainingPlan = new TrainingPlan();
     this.trainingPlan.GeneratePlanWeeks();
-
   }
 }

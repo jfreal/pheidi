@@ -22,7 +22,7 @@ export class TrainingPlan {
             new DayConfig(DistanceType.Quarter, DayType.Run),
             new DayConfig(DistanceType.None, DayType.Rest),
             new DayConfig(DistanceType.Long, DayType.Run),
-            new DayConfig(DistanceType.None, DayType.Cross)
+            new DayConfig(DistanceType.None, DayType.Rest)
         ]
     }
 
@@ -46,11 +46,11 @@ export class TrainingPlan {
             // -1 is marathon week
             if (week.weekNumber == lastLongRunWeek) {
                 week.lastLongRun = true;
-                week.days[6].distance = this.lastLongRunDistance;
+                week.distances.set(DistanceType.Long, this.lastLongRunDistance);
             } else {
 
                 if (longWeek && week.weekNumber < lastLongRunWeek) {
-                    week.days[6].distance = this.lastLongRunDistance - weeksUntilLongRun;
+                    week.distances.set(DistanceType.Long, this.lastLongRunDistance - weeksUntilLongRun);
                 }
 
                 //longest run generation
@@ -61,20 +61,30 @@ export class TrainingPlan {
                         recoveryDistance = 5
                     }
 
-                    week.days[6].distance = nextWeek.days[6].distance - recoveryDistance;
+                    console.log(week.weekNumber)
+
+                    week.distances.set(DistanceType.Long, nextWeek.distances.get(DistanceType.Long) - recoveryDistance);
                 }
             }
 
+
             //mid week generation
             if (week.weekNumber == lastLongRunWeek) {
-                week.halfRunDistance = Math.ceil((this.lastLongRunDistance / 2));
-                week.quarterRunDistance = Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance);
+                week.distances.set(DistanceType.Half, Math.ceil((this.lastLongRunDistance / 2)));
+                week.distances.set(DistanceType.Quarter, Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance));
             } else {
-                week.halfRunDistance = Math.ceil((week.weekNumber / 2) + 2);
-                week.days[1].distance = Math.max(Math.floor(week.days[2].distance / 2), this.minimumRunDistance);
-                week.days[3].distance = Math.max(Math.ceil(week.days[2].distance / 2), this.minimumRunDistance);
+
+                let incrementedHalf = Math.ceil((week.weekNumber / 2) + 2);
+
+                week.distances.set(DistanceType.Half, incrementedHalf);
+                week.distances.set(DistanceType.Quarter, Math.max(Math.floor(incrementedHalf / 2), this.minimumRunDistance));
+                week.distances.set(DistanceType.QuarterUp, Math.max(Math.ceil(incrementedHalf / 2), this.minimumRunDistance));
+
+                // week.days[1].distance = Math.max(Math.floor(week.days[2].distance / 2), this.minimumRunDistance);
+                // week.days[3].distance = Math.max(Math.ceil(week.days[2].distance / 2), this.minimumRunDistance);
             }
 
+            console.log(week.distances);
             weeks.unshift(week);
         }
 
@@ -84,7 +94,6 @@ export class TrainingPlan {
             let halfOfTheLongestRun = (this.lastLongRunDistance / 2);
 
             let midWeekRun = halfOfTheLongestRun - ((i + 1) * 2);
-
 
             // var taperDistance = Math.floor(lastLongRunWeek / 2) + 1;
 
@@ -99,12 +108,12 @@ export class TrainingPlan {
 
             let taperWeek = weeks[this.numberOfWeeks - this.weeksOfTaper + i];
 
-            taperWeek.days[2].distance = midWeekRun;
+            week.distances.set(DistanceType.Half, midWeekRun);
 
-            taperWeek.days[1].distance = Math.floor(midWeekRun / 2) + 1;
-            taperWeek.days[3].distance = Math.floor(midWeekRun / 2);
+            week.distances.set(DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
+            week.distances.set(DistanceType.Quarter, Math.floor(midWeekRun / 2));
 
-            taperWeek.days[this.longRunDay].distance = halfWayWeek.days[this.longRunDay].distance;
+            taperWeek.distances.set(DistanceType.Long, halfWayWeek.distances.get(DistanceType.Long));
         }
 
         if (this.marathonDate) {

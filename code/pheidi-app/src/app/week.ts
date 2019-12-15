@@ -1,24 +1,13 @@
 import { Day } from './day'
+import { DistanceType } from './distance-type.enum';
 
 export class Week {
-    days: Day[];
     weekNumber: number;
     lastLongRun: boolean;
 
-    longRunDistance: number;
-    halfRunDistance: number;
-    quarterRunDistance: number;
+    distances: Map<DistanceType, number> = new Map<DistanceType, number>();
 
     constructor(weekNumber: number) {
         this.weekNumber = weekNumber;
-        this.days = [
-            new Day(),
-            new Day(),
-            new Day(),
-            new Day(),
-            new Day(),
-            new Day(),
-            new Day()
-        ];
     }
 }

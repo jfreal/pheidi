@@ -1,7 +1,7 @@
 export enum DistanceType {
-    Long,
-    Half,
-    Quarter,
-    Time,
-    None
+    Long = "LONG",
+    Half = "HALF",
+    Quarter = "QUARTER",
+    QuarterUp = "QUARTERUP",
+    None = "NONE"
 }

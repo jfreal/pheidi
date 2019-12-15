@@ -1,6 +1,6 @@
 <div class="row mt-4">
   <div class="col-6">
-    <h4><i class="fas fa-cogs"></i> Settings</h4>
+    <h5><i class="fas fa-cogs"></i> Settings</h5>
 
     <table class="table table-sm dropdowns">
       <tr>
@@ -16,49 +16,70 @@
       <tr>
         <td>Dist</td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[0].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[1].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[2].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[3].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[4].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[5].distanceType">
+          </app-distance-type-selector>
         </td>
         <td>
-          <app-type-of-day></app-type-of-day>
+          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[6].distanceType">
+          </app-distance-type-selector>
         </td>
       </tr>
       <tr class="dropdowns">
         <td>Type</td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[0].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(0, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[0].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[1].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(1, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[1].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[2].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(2, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[2].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[3].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(3, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[3].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[4].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(4, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[4].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[5].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(5, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[5].dayType">
+          </app-day-type-selector>
         </td>
         <td>
-          <app-type-of-day [selectedDayType]="trainingPlan.dayConfigs[6].dayType"></app-type-of-day>
+          <app-day-type-selector (onDayTypeChanged)="changeDayType(6, $event)"
+            [selectedDayType]="trainingPlan.dayConfigs[6].dayType">
+          </app-day-type-selector>
         </td>
       </tr>
       <tr>
@@ -94,7 +115,7 @@
 
   </div>
   <div class="col-6">
-    <h4><i class="fas fa-scroll"></i> Training Plan</h4>
+    <h5><i class="fas fa-scroll"></i> Training Plan</h5>
     <table class="table">
       <thead>
         <tr>
@@ -112,13 +133,31 @@
       <tbody>
         <tr *ngFor="let week of trainingPlan.generatedWeeks">
           <td>{{week.weekNumber}}</td>
-          <td>{{week.days[0].distance}}</td>
-          <td>{{week.days[1].distance}}</td>
-          <td>{{week.days[2].distance}}</td>
-          <td>{{week.days[3].distance}}</td>
-          <td>{{week.days[4].distance}}</td>
-          <td>{{week.days[5].distance}}</td>
-          <td>{{week.days[6].distance}}</td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[0]" [week]="week" [dayIndex]="0"></app-day-summary>
+          </td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[1]" [week]="week" [dayIndex]="1"></app-day-summary>
+
+          </td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[2]" [week]="week" [dayIndex]="2"></app-day-summary>
+
+          </td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[3]" [week]="week" [dayIndex]="3"></app-day-summary>
+
+          </td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[4]" [week]="week" [dayIndex]="4"></app-day-summary>
+          </td>
+
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[5]" [week]="week" [dayIndex]="5"></app-day-summary>
+          </td>
+          <td>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[6]" [week]="week" [dayIndex]="6"></app-day-summary>
+          </td>
           <td></td>
         </tr>
       </tbody>

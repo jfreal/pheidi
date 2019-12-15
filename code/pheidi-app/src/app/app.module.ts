@@ -5,13 +5,18 @@ import { FormsModule } from '@angular/forms';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { PlanGeneratorComponent } from './plan-generator/plan-generator.component';
-import { TypeOfDayComponent } from './type-of-day/type-of-day.component'
+import { DaySummaryComponent } from './day-summary/day-summary.component';
+import { DayTypeSelectorComponent } from './day-type-selector/day-type-selector.component';
+import { DistanceTypeSelectorComponent } from './distance-type-selector/distance-type-selector.component'
 
 @NgModule({
   declarations: [
     AppComponent,
     PlanGeneratorComponent,
-    TypeOfDayComponent
+    DayTypeSelectorComponent,
+    DaySummaryComponent,
+    DayTypeSelectorComponent,
+    DistanceTypeSelectorComponent
   ],
   imports: [
     BrowserModule,

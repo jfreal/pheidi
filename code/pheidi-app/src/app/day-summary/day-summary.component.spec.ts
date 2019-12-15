@@ -1,20 +1,20 @@
 import { async, ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TypeOfDayComponent } from './type-of-day.component';
+import { DaySummaryComponent } from './day-summary.component';
 
-describe('TypeOfDayComponent', () => {
-  let component: TypeOfDayComponent;
-  let fixture: ComponentFixture<TypeOfDayComponent>;
+describe('DaySummaryComponent', () => {
+  let component: DaySummaryComponent;
+  let fixture: ComponentFixture<DaySummaryComponent>;
 
   beforeEach(async(() => {
     TestBed.configureTestingModule({
-      declarations: [ TypeOfDayComponent ]
+      declarations: [ DaySummaryComponent ]
     })
     .compileComponents();
   }));
 
   beforeEach(() => {
-    fixture = TestBed.createComponent(TypeOfDayComponent);
+    fixture = TestBed.createComponent(DaySummaryComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
   });

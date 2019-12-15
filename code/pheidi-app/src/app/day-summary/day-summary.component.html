@@ -1,0 +1,9 @@
+<span *ngIf="dayConfig.dayType === DayType.Rest">
+  Rest
+</span>
+<span *ngIf="dayConfig.dayType === DayType.Sprint">
+  Sprint
+</span>
+<span *ngIf="dayConfig.dayType === DayType.Run">
+  {{week.distances.get(dayConfig.distanceType)}}
+</span>

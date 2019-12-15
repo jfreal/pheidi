@@ -1,0 +1,16 @@
+<div class="btn-group">
+  <button class="btn btn-type dropdown-toggle border" type="button" data-toggle="dropdown" aria-haspopup="true"
+    aria-expanded="false">
+    {{DistanceTypeLabelMapping[selectedDistanceType]}}
+    <i *ngIf="selectedDistanceType.endsWith('UP')" class="fas fa-angle-up"></i>
+  </button>
+  <div class="dropdown-menu">
+    <a class="dropdown-item" href="#" *ngFor="let distanceType of distanceTypes"
+      (click)="changeDistanceType(distanceType)">
+      {{DistanceTypeLabelMapping[distanceType]}}
+      <i *ngIf="distanceType.endsWith('UP')" class="fas fa-angle-up"></i>
+    </a>
+
+    <!-- {{distanceTypes}} -->
+  </div>
+</div>
