@@ -16,31 +16,38 @@
       <tr>
         <td>Dist</td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[0].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(0, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[0].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[1].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(1, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[1].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[2].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(2, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[2].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[3].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(3, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[3].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[4].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(4, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[4].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[5].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(5, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[5].distanceType">
           </app-distance-type-selector>
         </td>
         <td>
-          <app-distance-type-selector [selectedDistanceType]="trainingPlan.dayConfigs[6].distanceType">
+          <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(6, $event)"
+            [selectedDistanceType]="trainingPlan.dayConfigs[6].distanceType">
           </app-distance-type-selector>
         </td>
       </tr>

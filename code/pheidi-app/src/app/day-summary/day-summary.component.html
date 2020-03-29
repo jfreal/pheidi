@@ -1,9 +1,9 @@
 <span *ngIf="dayConfig.dayType === DayType.Rest">
-  Rest
+  <i class="fas fa-bed"></i>
 </span>
 <span *ngIf="dayConfig.dayType === DayType.Sprint">
   Sprint
 </span>
-<span *ngIf="dayConfig.dayType === DayType.Run">
+<span *ngIf="dayConfig.dayType === DayType.Run" class="distance">
   {{week.distances.get(dayConfig.distanceType)}}
 </span>
