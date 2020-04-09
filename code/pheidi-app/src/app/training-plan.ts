@@ -67,7 +67,6 @@ export class TrainingPlan {
                 }
             }
 
-
             //mid week generation
             if (week.weekNumber == lastLongRunWeek) {
                 week.distances.set(DistanceType.Half, Math.ceil((this.lastLongRunDistance / 2)));
@@ -79,9 +78,6 @@ export class TrainingPlan {
                 week.distances.set(DistanceType.Half, incrementedHalf);
                 week.distances.set(DistanceType.Quarter, Math.max(Math.floor(incrementedHalf / 2), this.minimumRunDistance));
                 week.distances.set(DistanceType.QuarterUp, Math.max(Math.ceil(incrementedHalf / 2), this.minimumRunDistance));
-
-                // week.days[1].distance = Math.max(Math.floor(week.days[2].distance / 2), this.minimumRunDistance);
-                // week.days[3].distance = Math.max(Math.ceil(week.days[2].distance / 2), this.minimumRunDistance);
             }
 
             console.log(week.distances);
@@ -102,16 +98,15 @@ export class TrainingPlan {
 
             halfWay = Math.floor(halfWay / 2);
 
-            console.log(halfWay)
-
             let halfWayWeek = weeks[halfWay - 1];
 
             let taperWeek = weeks[this.numberOfWeeks - this.weeksOfTaper + i];
 
-            week.distances.set(DistanceType.Half, midWeekRun);
+            taperWeek.taper = true;
 
-            week.distances.set(DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
-            week.distances.set(DistanceType.Quarter, Math.floor(midWeekRun / 2));
+            // week.distances.set(DistanceType.Half, midWeekRun);
+            // week.distances.set(DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
+            // week.distances.set(DistanceType.Quarter, Math.floor(midWeekRun / 2));
 
             taperWeek.distances.set(DistanceType.Long, halfWayWeek.distances.get(DistanceType.Long));
         }

@@ -138,10 +138,11 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let week of trainingPlan.generatedWeeks">
+        <tr *ngFor="let week of trainingPlan.generatedWeeks" [ngClass]="{'taper-week': week.taper}">
           <td>{{week.weekNumber}}</td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[0]" [week]="week" [dayIndex]="0"></app-day-summary>
+            <app-day-summary [dayConfig]=" trainingPlan.dayConfigs[0]" [week]="week" [dayIndex]="0">
+            </app-day-summary>
           </td>
           <td>
             <app-day-summary [dayConfig]="trainingPlan.dayConfigs[1]" [week]="week" [dayIndex]="1"></app-day-summary>

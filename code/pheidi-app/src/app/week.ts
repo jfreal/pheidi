@@ -6,6 +6,7 @@ export class Week {
     lastLongRun: boolean;
 
     distances: Map<DistanceType, number> = new Map<DistanceType, number>();
+    taper: boolean;
 
     constructor(weekNumber: number) {
         this.weekNumber = weekNumber;
