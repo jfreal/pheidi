@@ -1,0 +1,196 @@
+﻿@page "/"
+@using Pheidi.Blazor.Shared;
+
+<div class="row mt-4">
+    <div class="col-6">
+        <h5 class="mb-4"><i class="fas fa-cogs"></i> Settings</h5>
+
+        <table class="table table-sm dropdowns">
+            <tr>
+                <th>Week</th>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+                <th>Sun</th>
+            </tr>
+            <tr>
+                <td>Dist</td>
+                <td>
+                    <div class="btn-group">
+                        <button class="btn btn-type dropdown-toggle border" type="button" data-toggle="dropdown" aria-haspopup="true"
+                                aria-expanded="false">
+
+                            <i *ngIf="selectedDistanceType.endsWith('UP')" class="fas fa-angle-up"></i>
+                        </button>
+                        <div class="dropdown-menu">
+                            <a href="#" class="dropdown-item"> </a>
+                            <a href="#" class="dropdown-item">½ L</a>
+                            <a href="#" class="dropdown-item">¼ L</a>
+                            <a href="#" class="dropdown-item">¼ L <i class="fas fa-angle-up"></i></a>
+                            <a href="#" class="dropdown-item">-</a>
+                        </div>
+                    </div>
+
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(1, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[1].distanceType">
+                    </app-distance-type-selector>
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(2, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[2].distanceType">
+                    </app-distance-type-selector>
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(3, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[3].distanceType">
+                    </app-distance-type-selector>
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(4, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[4].distanceType">
+                    </app-distance-type-selector>
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(5, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[5].distanceType">
+                    </app-distance-type-selector>
+                </td>
+                <td>
+                    <app-distance-type-selector (onDistanceTypeChanged)="changeDistanceType(6, $event)"
+                                                [selectedDistanceType]="trainingPlan.dayConfigs[6].distanceType">
+                    </app-distance-type-selector>
+                </td>
+            </tr>
+            <tr class="dropdowns">
+                <td>Type</td>
+                <td>
+                    <select>
+                        <option><i class="fas fa-bed fa-fw"></i>REST</option>
+                        <option><i class="fas fa-running fa-fw"></i>RUN</option>
+                        <option><i class="fas fa-tachometer-alt fa-fw"></i>SPRINT</option>
+                        <option><i class="fas fa-times fa-fw"></i>CROSS</option>
+                        <option><i class="fas fa-dumbbell fa-fw"></i>STRENGTH</option>
+                        <option><i class="fas fa-chart-line fa-fw"></i>FARTLEK</option>
+                    </select>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(1, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[1].dayType">
+                    </app-day-type-selector>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(2, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[2].dayType">
+                    </app-day-type-selector>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(3, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[3].dayType">
+                    </app-day-type-selector>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(4, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[4].dayType">
+                    </app-day-type-selector>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(5, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[5].dayType">
+                    </app-day-type-selector>
+                </td>
+                <td>
+                    <app-day-type-selector (onDayTypeChanged)="changeDayType(6, $event)"
+                                           [selectedDayType]="trainingPlan.dayConfigs[6].dayType">
+                    </app-day-type-selector>
+                </td>
+            </tr>
+            <tr>
+            </tr>
+        </table>
+
+
+        <input @bind="@trainingPlan.LongRunMaxDistance" @bind:event="oninput" />
+        @trainingPlan.LongRunMaxDistance
+
+    </div>
+
+  
+    <div class="col-6">
+        <h5 class="mb-4"><i class="fas fa-scroll"></i> Training Plan</h5>
+
+
+        <table class="table table-plan border rounded">
+            <thead>
+                <tr>
+                    <th>Week</th>
+                    <th>Mon</th>
+                    <th>Tue</th>
+                    <th>Wed</th>
+                    <th>Thu</th>
+                    <th>Fri</th>
+                    <th>Sat</th>
+                    <th>Sun</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var week in trainingPlan.Weeks)
+                {
+
+                    <tr>
+                        <td>@week.WeekNumber</td>
+                        <td>                            
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[0]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[1]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[2]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[3]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[4]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[5]" Week="week" />
+                        </td>
+                        <td>
+                            <DaySummary DayConfig="trainingPlan.DayConfigs[6]" Week="week" />
+                        </td>
+                        <td></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+@code {
+
+    private TrainingPlan trainingPlan;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        trainingPlan = new TrainingPlan();
+
+        trainingPlan.Generate();
+    }
+
+    //[Parameter]
+    //public int IncrementBy { get; set; } = 1;
+
+    //private void IncrementCount()
+    //{
+    //    currentCount += IncrementBy;
+    //}
+}

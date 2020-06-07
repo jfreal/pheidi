@@ -24,7 +24,6 @@ export class DayTypeSelectorComponent implements OnInit {
   }
 
   changeDayType(dayType: DayType) {
-
     this.selectedDayType = dayType;
     this.onDayTypeChanged.emit(dayType);
     console.log(dayType);

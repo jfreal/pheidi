@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { TrainingPlan } from '../training-plan'
 import { DayConfig } from '../day-config';
+import { DayType } from '../day-type.enum';
+import { DistanceType } from '../distance-type.enum';
 
 @Component({
   selector: 'app-plan-generator',
@@ -13,6 +15,11 @@ export class PlanGeneratorComponent implements OnInit {
   constructor() { }
 
   changeDayType(dayIndex, dayType) {
+
+    if (dayType === DayType.Rest) {
+      this.trainingPlan.dayConfigs[dayIndex].distanceType = DistanceType.None;
+    }
+
     this.trainingPlan.dayConfigs[dayIndex].dayType = dayType;
   }
 

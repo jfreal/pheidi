@@ -1,6 +1,23 @@
 .fa-bed
     color: #ccc
 
-.distance
+
+:host-context(tr:hover)
+    .form-control
+        border: 1px solid #ccc
+        border-radius: 0
+
+.form-control    
+    border-radius: 0
+    padding: 0
+    border: 1px solid #fff
+    height: 100%
     font-size: 1.3rem
     font-weight: bold
+    width: 2.7rem
+    text-align: center
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button 
+    -webkit-appearance: none
+    margin: 0

@@ -1,0 +1,15 @@
+﻿@page "/thisisadumbhacktofixaproblem" 
+
+@if (DayConfig.DayType == DayType.Run && Week.Distances.ContainsKey(DayConfig.RunDistance))
+{
+    <input value="@Week.Distances[DayConfig.RunDistance]" class="form-control" />    
+}
+
+
+@code {
+    [Parameter]
+    public DayConfig DayConfig { get; set; }
+
+    [Parameter]
+    public Week Week { get; set; }
+}

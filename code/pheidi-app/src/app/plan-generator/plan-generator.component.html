@@ -1,6 +1,6 @@
 <div class="row mt-4">
   <div class="col-6">
-    <h5><i class="fas fa-cogs"></i> Settings</h5>
+    <h5 class="mb-4"><i class="fas fa-cogs"></i> Settings</h5>
 
     <table class="table table-sm dropdowns">
       <tr>
@@ -95,34 +95,11 @@
     </table>
 
 
-    <form>
-      <div class="form-group">
-        <label for="exampleFormControlSelect1">Long Run Day</label>
-        <select class="form-control form-control-sm" name="longRunDay" [(ngModel)]="trainingPlan.longRunDay">
-          <option [value]="0">Monday</option>
-          <option [value]="1">Tuesday</option>
-          <option [value]="2">Wednesday</option>
-          <option [value]="3">Thursday</option>
-          <option [value]="4">Friday</option>
-          <option [value]="5">Saturday</option>
-          <option [value]="6">Sunday</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="exampleInputPassword1">Password</label>
-        <input type="password" class="form-control form-control-sm" id="exampleInputPassword1" placeholder="Password">
-      </div>
-      <div class="form-group form-check">
-        <input type="checkbox" class="form-check-input " id="exampleCheck1">
-        <label class="form-check-label" for="exampleCheck1">Check me out</label>
-      </div>
-      <button type="submit" class="btn btn-primary">Submit</button>
-    </form>
 
 
   </div>
   <div class="col-6">
-    <h5><i class="fas fa-scroll"></i> Training Plan</h5>
+    <h5 class="mb-4"><i class="fas fa-scroll"></i> Training Plan</h5>
     <table class="table table-plan border rounded">
       <thead>
         <tr>
@@ -141,30 +118,43 @@
         <tr *ngFor="let week of trainingPlan.generatedWeeks" [ngClass]="{'taper-week': week.taper}">
           <td>{{week.weekNumber}}</td>
           <td>
-            <app-day-summary [dayConfig]=" trainingPlan.dayConfigs[0]" [week]="week" [dayIndex]="0">
+            <app-day-summary [dayConfig]=" trainingPlan.dayConfigs[0]" [week]="week" [dayIndex]="0"
+              [distanceType]="trainingPlan.dayConfigs[0].distanceType" [dayType]="trainingPlan.dayConfigs[0].dayType">
             </app-day-summary>
           </td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[1]" [week]="week" [dayIndex]="1"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[1]" [week]="week" [dayIndex]="1"
+              [distanceType]="trainingPlan.dayConfigs[1].distanceType" [dayType]="trainingPlan.dayConfigs[1].dayType">
+            </app-day-summary>
 
           </td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[2]" [week]="week" [dayIndex]="2"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[2]" [week]="week" [dayIndex]="2"
+              [distanceType]="trainingPlan.dayConfigs[2].distanceType" [dayType]="trainingPlan.dayConfigs[2].dayType">
+            </app-day-summary>
 
           </td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[3]" [week]="week" [dayIndex]="3"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[3]" [week]="week" [dayIndex]="3"
+              [distanceType]="trainingPlan.dayConfigs[3].distanceType" [dayType]="trainingPlan.dayConfigs[3].dayType">
+            </app-day-summary>
 
           </td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[4]" [week]="week" [dayIndex]="4"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[4]" [week]="week" [dayIndex]="4"
+              [distanceType]="trainingPlan.dayConfigs[4].distanceType" [dayType]="trainingPlan.dayConfigs[4].dayType">
+            </app-day-summary>
           </td>
 
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[5]" [week]="week" [dayIndex]="5"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[5]"
+              [distanceType]="trainingPlan.dayConfigs[5].distanceType" [dayType]="trainingPlan.dayConfigs[5].dayType"
+              [week]="week" [dayIndex]="5"></app-day-summary>
           </td>
           <td>
-            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[6]" [week]="week" [dayIndex]="6"></app-day-summary>
+            <app-day-summary [dayConfig]="trainingPlan.dayConfigs[6]"
+              [distanceType]="trainingPlan.dayConfigs[6].distanceType" [dayType]="trainingPlan.dayConfigs[6].dayType"
+              [week]="week" [dayIndex]="6"></app-day-summary>
           </td>
           <td></td>
         </tr>

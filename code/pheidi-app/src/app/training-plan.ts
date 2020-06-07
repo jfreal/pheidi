@@ -46,11 +46,11 @@ export class TrainingPlan {
             // -1 is marathon week
             if (week.weekNumber == lastLongRunWeek) {
                 week.lastLongRun = true;
-                week.distances.set(DistanceType.Long, this.lastLongRunDistance);
+                week.distances[DistanceType.Long] = this.lastLongRunDistance;
             } else {
 
                 if (longWeek && week.weekNumber < lastLongRunWeek) {
-                    week.distances.set(DistanceType.Long, this.lastLongRunDistance - weeksUntilLongRun);
+                    week.distances[DistanceType.Long] = this.lastLongRunDistance - weeksUntilLongRun;
                 }
 
                 //longest run generation
@@ -63,27 +63,28 @@ export class TrainingPlan {
 
                     console.log(week.weekNumber)
 
-                    week.distances.set(DistanceType.Long, nextWeek.distances.get(DistanceType.Long) - recoveryDistance);
+                    week.distances[DistanceType.Long] = nextWeek.distances[DistanceType.Long] - recoveryDistance;
                 }
             }
 
             //mid week generation
             if (week.weekNumber == lastLongRunWeek) {
-                week.distances.set(DistanceType.Half, Math.ceil((this.lastLongRunDistance / 2)));
-                week.distances.set(DistanceType.Quarter, Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance));
+                week.distances[DistanceType.Half] = Math.ceil((this.lastLongRunDistance / 2));
+                week.distances[DistanceType.Quarter] = Math.max(Math.ceil(this.lastLongRunDistance / 2 / 2), this.minimumRunDistance);
             } else {
 
                 let incrementedHalf = Math.ceil((week.weekNumber / 2) + 2);
 
-                week.distances.set(DistanceType.Half, incrementedHalf);
-                week.distances.set(DistanceType.Quarter, Math.max(Math.floor(incrementedHalf / 2), this.minimumRunDistance));
-                week.distances.set(DistanceType.QuarterUp, Math.max(Math.ceil(incrementedHalf / 2), this.minimumRunDistance));
+                week.distances[DistanceType.Half] = incrementedHalf;
+                week.distances[DistanceType.Quarter] = Math.max(Math.floor(incrementedHalf / 2), this.minimumRunDistance);
+                week.distances[DistanceType.QuarterUp] = Math.max(Math.ceil(incrementedHalf / 2), this.minimumRunDistance);
             }
 
             console.log(week.distances);
             weeks.unshift(week);
         }
 
+        //TAPER
         let halfWay: number = this.numberOfWeeks - this.weeksOfTaper;
         for (let i = 0; i < this.weeksOfTaper; i++) {
 
@@ -104,11 +105,15 @@ export class TrainingPlan {
 
             taperWeek.taper = true;
 
-            // week.distances.set(DistanceType.Half, midWeekRun);
-            // week.distances.set(DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
-            // week.distances.set(DistanceType.Quarter, Math.floor(midWeekRun / 2));
+            //0 2 1
+            //1 4 2
+            //2 6 3
 
-            taperWeek.distances.set(DistanceType.Long, halfWayWeek.distances.get(DistanceType.Long));
+            // week.distances[DistanceType.Half, midWeekRun);
+            // week.distances[DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
+            // week.distances[DistanceType.Quarter, Math.floor(midWeekRun / 2));
+
+            taperWeek.distances[DistanceType.Long] = halfWayWeek.distances[DistanceType.Long];
         }
 
         if (this.marathonDate) {
