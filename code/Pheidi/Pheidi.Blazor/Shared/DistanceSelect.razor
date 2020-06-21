@@ -1,0 +1,33 @@
+﻿<div class="btn-group">
+
+
+    <button type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" class="btn btn-type dropdown-toggle border">
+        ½ L
+
+    </button>
+
+    <div class="dropdown-menu">
+        <a href="#" class="dropdown-item">L</a>
+        <a href="#" class="dropdown-item">½ L</a>
+        <a href="#" class="dropdown-item">¼ L</a>
+        <a href="#" class="dropdown-item">
+            ¼ L<i class="fas fa-angle-up"></i>
+        </a><a href="#" class="dropdown-item">-</a>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int DayNumber { get; set; }
+
+    [Parameter]
+    public DayConfig DayConfig { get; set; }
+
+    [ParameterAttribute]
+    public EventCallback<DistanceSelectChangedArgs> OnDistanceChanged { get; set; }
+
+    void ChangeRunDistance(Pheidi.Common.DistanceType runDistance)
+    {
+        OnDistanceChanged.InvokeAsync(new DistanceSelectChangedArgs(DayNumber, runDistance));
+    }
+}

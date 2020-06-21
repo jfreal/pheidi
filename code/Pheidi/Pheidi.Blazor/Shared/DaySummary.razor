@@ -1,8 +1,6 @@
-﻿@page "/thisisadumbhacktofixaproblem" 
-
-@if (DayConfig.DayType == DayType.Run && Week.Distances.ContainsKey(DayConfig.RunDistance))
+﻿@if (DayConfig.Activity == Common.Activity.Run && Week.Distances.ContainsKey(DayConfig.DistanceType))
 {
-    <input value="@Week.Distances[DayConfig.RunDistance]" class="form-control" />    
+    <input value="@Week.Distances[DayConfig.DistanceType]" class="form-control" />    
 }
 
 

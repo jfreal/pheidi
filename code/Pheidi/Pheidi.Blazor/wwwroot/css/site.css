@@ -213,7 +213,7 @@ td, th {
     padding-bottom: 0.2rem;
 }
 
-.table-plan {
+.bg-white {
     background-color: #fff;
 }
 
@@ -224,17 +224,17 @@ tr:hover {
 .btn {
     padding: 0.2rem 0.4rem;
     background-color: #fff;
-    width: 3.2rem;
+
 }
 
 i.fas {
     color: #D95D41;
 }
 
-.btn {
+/*.btn {
     background-color: #fff;
     width: 3.3rem;
-}
+}*/
 
 .fa-bed {
     color: #ccc;
@@ -252,7 +252,6 @@ tr:hover .form-control, tr:hover  .form-control {
     height: 100%;
     font-size: 1.3rem;
     font-weight: bold;
-    width: 2.7rem;
     text-align: center;
 }
 
@@ -261,3 +260,6 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
     margin: 0;
 }
 
+.week-settings-table button {
+    width: 90px;
+}

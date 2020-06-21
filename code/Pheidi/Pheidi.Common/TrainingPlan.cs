@@ -11,13 +11,13 @@ namespace Pheidi.Common
         public TrainingPlan()
         {
             this.DayConfigs = new[] {
-               new DayConfig(RunDistance.None, DayType.Rest),
-               new DayConfig(RunDistance.Quarter, DayType.Run),
-               new DayConfig(RunDistance.Half, DayType.Run),
-               new DayConfig(RunDistance.Quarter, DayType.Run),
-               new DayConfig(RunDistance.None, DayType.Rest),
-               new DayConfig(RunDistance.Long, DayType.Run),
-               new DayConfig(RunDistance.None, DayType.Rest)
+               new DayConfig(DistanceType.None, Activity.Rest, EffortType.None),
+               new DayConfig(DistanceType.Quarter, Activity.Run, EffortType.Distance),
+               new DayConfig(DistanceType.Half, Activity.Run, EffortType.Distance),
+               new DayConfig(DistanceType.Quarter, Activity.Run, EffortType.Distance),
+               new DayConfig(DistanceType.None, Activity.Rest, EffortType.None),
+               new DayConfig(DistanceType.Long, Activity.Run, EffortType.Distance),
+               new DayConfig(DistanceType.None, Activity.Rest, EffortType.Distance)
             };
         }
 
@@ -63,14 +63,14 @@ namespace Pheidi.Common
                 if (week.WeekNumber == lastLongRunWeek)
                 {
                     week.LastLongRun = true;
-                    week.Distances[RunDistance.Long] = this.LongRunMaxDistance;
+                    week.Distances[DistanceType.Long] = this.LongRunMaxDistance;
                 }
                 else
                 {
 
                     if (longWeek && week.WeekNumber < lastLongRunWeek)
                     {
-                        week.Distances[RunDistance.Long] = this.LongRunMaxDistance - weeksUntilLongRun;
+                        week.Distances[DistanceType.Long] = this.LongRunMaxDistance - weeksUntilLongRun;
                     }
 
                     //longest run generation
@@ -84,24 +84,24 @@ namespace Pheidi.Common
                         }
 
     
-                        week.Distances[RunDistance.Long] = nextWeek.Distances[RunDistance.Long] - recoveryDistance;
+                        week.Distances[DistanceType.Long] = nextWeek.Distances[DistanceType.Long] - recoveryDistance;
                     }
                 }
 
                 //mid week generation
                 if (week.WeekNumber == lastLongRunWeek)
                 {
-                    week.Distances[RunDistance.Half] = this.LongRunMaxDistance / 2;
-                    week.Distances[RunDistance.Quarter] = (int)Math.Max(this.LongRunMaxDistance / 2m / 2m, this.MinRunDistance);
+                    week.Distances[DistanceType.Half] = this.LongRunMaxDistance / 2;
+                    week.Distances[DistanceType.Quarter] = (int)Math.Max(this.LongRunMaxDistance / 2m / 2m, this.MinRunDistance);
                 }
                 else
                 {
 
                    var incrementedHalf = (int)Math.Ceiling((week.WeekNumber / 2m) + 2);
 
-                    week.Distances[RunDistance.Half] = incrementedHalf;
-                    week.Distances[RunDistance.Quarter] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
-                    week.Distances[RunDistance.QuarterUp] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
+                    week.Distances[DistanceType.Half] = incrementedHalf;
+                    week.Distances[DistanceType.Quarter] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
+                    week.Distances[DistanceType.QuarterUp] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
                 }
 
                 Weeks.Add(week);
@@ -139,9 +139,9 @@ namespace Pheidi.Common
                 // week.distances[DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
                 // week.distances[DistanceType.Quarter, Math.floor(midWeekRun / 2));
 
-                if (halfWayWeek.Distances.ContainsKey(RunDistance.Long))
+                if (halfWayWeek.Distances.ContainsKey(DistanceType.Long))
                 {
-                    taperWeek.Distances[RunDistance.Long] = halfWayWeek.Distances[RunDistance.Long];
+                    taperWeek.Distances[DistanceType.Long] = halfWayWeek.Distances[DistanceType.Long];
                 }
             }
 
@@ -151,5 +151,56 @@ namespace Pheidi.Common
             //    now.setDate(this.marathonDate.getDate() - this.numberOfWeeks * 7);
             //}
         }
+
+
+        public PlanMetrics PlanMetrics
+        {
+            get
+            {
+                var metrics = new PlanMetrics();
+
+                foreach (var week in Weeks)
+                {
+                    for (int i = 0; i < 7; i++)
+                    {
+                        if (DayConfigs[i].Activity == Activity.Run)
+                        {
+                            var runDistance = week.Distances[DayConfigs[i].DistanceType];
+
+                            if (runDistance > 16)
+                            {
+                                metrics.RunsOver16++;
+
+                                metrics.MilesOver16 += runDistance - 16;
+                            }
+
+                            if (runDistance > 20)
+                            {
+                                metrics.RunsOver20++;
+                            }                            
+                        }
+                    }
+                }
+
+                return metrics;
+            }            
+        }
+    }
+
+    public class PlanMetrics
+    {
+        public int RunsOver16 { get; set; }
+
+        public int RunsOver20 { get; set; }
+
+        public int MilesOver16 { get; set; }
+
+        public int StartingMileage { get; set; }
+
+        public int Week16ToMax { get; set; }
+
+        public int ToRace16 { get; set; }
+
+        public int MaxToRace { get; set; }
     }
 }

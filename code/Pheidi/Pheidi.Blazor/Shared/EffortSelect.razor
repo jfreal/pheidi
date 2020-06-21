@@ -1,0 +1,30 @@
+﻿@if (this.DayConfig.Activity != Activity.Rest)
+{
+    <div class="dropdown">
+        <button class="btn btn-type dropdown-toggle border" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            @DayConfig.EffortType.ToString()
+        </button>
+        <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Distance))"><i class="fas fa-road"></i>Distance</a>
+            <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Time))"><i class="fas fa-stopwatch-20"></i>Time</a>
+            <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Reps))"><i class="fas fa-tachometer-alt fa-fw"></i>Reps</a>
+        </div>
+    </div>
+
+}
+
+@code {
+    [Parameter]
+    public int DayNumber { get; set; }
+
+    [Parameter]
+    public DayConfig DayConfig { get; set; }
+
+    [ParameterAttribute]
+    public EventCallback<EffortSelectChangedArgs> OnEffortChanged { get; set; }
+
+    void ChangeActivity(Pheidi.Common.EffortType effortType)
+    {
+        OnEffortChanged.InvokeAsync(new EffortSelectChangedArgs(DayNumber, effortType));
+    }
+}

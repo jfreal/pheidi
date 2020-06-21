@@ -19,12 +19,20 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Watch Remove="Pages\EffortSelect.razor" />
+    <Watch Remove="Shared\ActivitySelect.razor" />
+    <Watch Remove="Shared\ActivitySelectChangedArgs.cs" />
     <Watch Remove="Shared\DaySummary.razor" />
-    <Watch Remove="Shared\TestComp.razor" />
+    <Watch Remove="Shared\DistanceSelect.razor" />
+    <Watch Remove="Shared\DistanceSelectChangedArgs.cs" />
+    <Watch Remove="Shared\EffortMetricSelect.razor" />
+    <Watch Remove="Shared\EffortSelectChangedArgs.cs" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="Shared\ActivitySelect.razor" />
     <None Include="Shared\DaySummary.razor" />
-    <None Include="Shared\TestComp.razor" />
+    <None Include="Shared\DistanceSelect.razor" />
+    <None Include="Shared\EffortSelect.razor" />
   </ItemGroup>
 </Project>
