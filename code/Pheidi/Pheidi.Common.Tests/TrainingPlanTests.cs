@@ -12,8 +12,7 @@ namespace Pheidi.Common.Tests
 
             trainingPlan.Generate();
 
-            Assert.AreEqual(trainingPlan.PlanMetrics.RunsOver16, 2);
-            Assert.AreEqual(trainingPlan.PlanMetrics.RunsOver16, 2);
+            Assert.AreEqual(trainingPlan.PlanMetrics.RunsOver16, 3);
         }
     }
 }

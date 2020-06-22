@@ -13,7 +13,7 @@ namespace Pheidi.Common
 
         public bool LastLongRun { get; set; }
 
-        public Dictionary<DistanceType, int> Distances { get; set; } = new Dictionary<DistanceType, int>();
+        public Dictionary<DistanceType, decimal> Distances { get; set; } = new Dictionary<DistanceType, decimal>();
         public bool Taper { get; internal set; }        
     }
 }

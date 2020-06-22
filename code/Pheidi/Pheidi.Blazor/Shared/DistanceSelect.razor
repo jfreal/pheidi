@@ -2,17 +2,15 @@
 
 
     <button type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" class="btn btn-type dropdown-toggle border">
-        ½ L
-
+            @DayConfig.DistanceType.ToString()
     </button>
 
     <div class="dropdown-menu">
-        <a href="#" class="dropdown-item">L</a>
-        <a href="#" class="dropdown-item">½ L</a>
-        <a href="#" class="dropdown-item">¼ L</a>
-        <a href="#" class="dropdown-item">
-            ¼ L<i class="fas fa-angle-up"></i>
-        </a><a href="#" class="dropdown-item">-</a>
+        <a @onclick="@(() => ChangeRunDistance(Pheidi.Common.DistanceType.Long))" class="dropdown-item">L</a>
+        <a @onclick="@(() => ChangeRunDistance(Pheidi.Common.DistanceType.Half))" class="dropdown-item">½ L</a>
+        <a @onclick="@(() => ChangeRunDistance(Pheidi.Common.DistanceType.Quarter))" class="dropdown-item">¼ L</a>
+        <a @onclick="@(() => ChangeRunDistance(Pheidi.Common.DistanceType.QuarterUp))" class="dropdown-item">¼ L<i class="fas fa-angle-up"></i></a>
+        <a @onclick="@(() => ChangeRunDistance(Pheidi.Common.DistanceType.None))" class="dropdown-item">-</a>
     </div>
 </div>
 

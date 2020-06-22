@@ -17,7 +17,7 @@ namespace Pheidi.Common
                new DayConfig(DistanceType.Quarter, Activity.Run, EffortType.Distance),
                new DayConfig(DistanceType.None, Activity.Rest, EffortType.None),
                new DayConfig(DistanceType.Long, Activity.Run, EffortType.Distance),
-               new DayConfig(DistanceType.None, Activity.Rest, EffortType.Distance)
+               new DayConfig(DistanceType.None, Activity.Rest, EffortType.None)
             };
         }
 
@@ -135,9 +135,9 @@ namespace Pheidi.Common
                 //1 4 2
                 //2 6 3
 
-                // week.distances[DistanceType.Half, midWeekRun);
-                // week.distances[DistanceType.QuarterUp, Math.floor(midWeekRun / 2) + 1);
-                // week.distances[DistanceType.Quarter, Math.floor(midWeekRun / 2));
+                taperWeek.Distances[DistanceType.Half] = midWeekRun;
+                taperWeek.Distances[DistanceType.QuarterUp] = (int)Math.Round(midWeekRun / 2m);
+                taperWeek.Distances[DistanceType.Quarter] = (int)Math.Ceiling(midWeekRun / 2m);
 
                 if (halfWayWeek.Distances.ContainsKey(DistanceType.Long))
                 {
@@ -167,14 +167,14 @@ namespace Pheidi.Common
                         {
                             var runDistance = week.Distances[DayConfigs[i].DistanceType];
 
-                            if (runDistance > 16)
+                            if (runDistance >= 16)
                             {
                                 metrics.RunsOver16++;
 
                                 metrics.MilesOver16 += runDistance - 16;
                             }
 
-                            if (runDistance > 20)
+                            if (runDistance >= 20)
                             {
                                 metrics.RunsOver20++;
                             }                            
@@ -193,7 +193,7 @@ namespace Pheidi.Common
 
         public int RunsOver20 { get; set; }
 
-        public int MilesOver16 { get; set; }
+        public decimal MilesOver16 { get; set; }
 
         public int StartingMileage { get; set; }
 
