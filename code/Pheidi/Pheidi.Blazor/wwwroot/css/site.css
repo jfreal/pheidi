@@ -217,39 +217,28 @@ td, th {
     background-color: #fff;
 }
 
-tr:hover {
-    background-color: #fcf9f7;
-}
-
-.btn {
+#training-plan .btn {
     padding: 0.2rem 0.4rem;
     background-color: #fff;
-
 }
 
 i.fas {
     color: #D95D41;
 }
 
-/*.btn {
-    background-color: #fff;
-    width: 3.3rem;
-}*/
-
 .fa-bed {
     color: #ccc;
 }
 
-tr:hover .form-control, tr:hover  .form-control {
-    border: 1px solid #ccc;
-    border-radius: 0;
+.activity-table tr:hover {
+    background-color: #fcf9f7;
 }
 
 
-input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
+    .activity-table tr:hover .form-control, .activity-table tr:hover .form-control {
+        border: 1px solid #ccc;
+        border-radius: 0;
+    }
 
 .week-settings-table button {
     width: 90px;
@@ -263,3 +252,5 @@ input[type=number]::-webkit-outer-spin-button, input[type=number]::-webkit-inner
     height: 100%;
     text-align: center;
 }
+
+

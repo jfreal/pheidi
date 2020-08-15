@@ -1,136 +1,198 @@
 ﻿@page "/"
 @using Pheidi.Blazor.Shared 
 
-<div class="row mt-4">
-    <div class="col-8">
-        <h5><i class="fas fa-cogs"></i> Settings</h5>
 
 
-        <table class="table table-sm bg-white border week-settings-table">
-            <tr>
-                <th></th>
-                <th>Mon</th>
-                <th>Tue</th>
-                <th>Wed</th>
-                <th>Thu</th>
-                <th>Fri</th>
-                <th>Sat</th>
-                <th>Sun</th>
-                <th></th>
-            </tr>
-            <tbody>
-                <tr>
-                    <td></td>
-
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnActivityChanged="OnActivityChanged" /></td>
-                    <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnActivityChanged="OnActivityChanged" /></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td></td>
-
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td><EffortSelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnEffortChanged="OnEffortSelectChanged" /></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td></td>
-
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnDistanceChanged="OnDistanceTypeChanged" /></td>
-                    <td></td>
-
-                </tr>
-            </tbody>
-        </table>
-
-        <h5><i class="fas fa-scroll"></i> Training Plan</h5>
+    <div class="row mt-4">
+        <div class="col-3 px-0">
 
 
-        <table class="table table-sm bg-white border activity-table">
+            <strong><i class="fas fa-running"></i> Generation</strong>
 
-            <tr>
-                <th>Week</th>
-                <th>Mon</th>
-                <th>Tue</th>
-                <th>Wed</th>
-                <th>Thu</th>
-                <th>Fri</th>
-                <th>Sat</th>
-                <th>Sun</th>
-                <th></th>
-            </tr>
-            <tbody>
-                @foreach (var week in trainingPlan.Weeks)
-                {
+            <div class=" bg-white rounded p-1 mt-2">
 
+                <form>
+
+                    <div class="form-group">
+                        <label>Number of Weeks</label>
+                        <input type="number" class="form-control form-control-sm" @bind="@trainingPlan.NumberOfWeeks" @bind:event="oninput" />
+                        <small class="form-text text-muted">The number of weeks in your training plan.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Weeks Of Taper</label>
+                        <input type="number" class="form-control form-control-sm" @bind="@trainingPlan.WeeksOfTaper" @bind:event="oninput" />
+                        <small class="form-text text-muted">Weeks after your peak training week before the marathon.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Min Run Distance</label>
+                        <input type="number" class="form-control form-control-sm" @bind="@trainingPlan.MinRunDistance" @bind:event="oninput" />
+                        <small class="form-text text-muted">Minimum long run distance.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">Max Run Distance</label>
+                        <input type="number" class="form-control form-control-sm" @bind="@trainingPlan.LongRunMaxDistance" @bind:event="oninput" />
+                        <small class="form-text text-muted">Maximum long run distance.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="exampleInputPassword1">WeeksOfTaper</label>
+                        <input type="number" class="form-control" id="exampleInputPassword1" placeholder="Password">
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Generate Weeks</button>
+                </form>
+
+
+
+
+
+
+                <input @bind="@trainingPlan.LongRunMaxDistance" @bind:event="oninput" />
+                @trainingPlan.LongRunMaxDistance
+            </div>
+        </div>
+
+        <div class="col-9">
+
+            <strong><i class="fas fa-cogs"></i> Training Plan</strong>
+            <div class="bg-white rounded mt-2 p-1" id="training-plan">
+
+                <span class="text-muted">Day Settings</span>
+
+                <table class="table table-sm  table-borderless week-settings-table mt-2">
                     <tr>
-                        <td>@week.WeekNumber</td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[0]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[1]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[2]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[3]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[4]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[5]" Week="week" />
-                        </td>
-                        <td>
-                            <DaySummary DayConfig="trainingPlan.DayConfigs[6]" Week="week" />
-                        </td>
-                        <td></td>
+                        <th></th>
+                        <th>Mon</th>
+                        <th>Tue</th>
+                        <th>Wed</th>
+                        <th>Thu</th>
+                        <th>Fri</th>
+                        <th>Sat</th>
+                        <th>Sun</th>
+                        <th></th>
                     </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-  
-    <div class="col-4">
-        <h5><i class="fas fa-info-circle"></i> Stats</h5>
-        <table class="table table-sm bg-white border rounded">
-            <tr>
-                <td>  Runs > 16: </td>
-                <td>@trainingPlan.PlanMetrics.RunsOver16</td>
-            </tr>
-            <tr>
-                <td>  Runs > 20: </td>
-                <td>@trainingPlan.PlanMetrics.RunsOver20</td>
-            </tr>
-            <tr>
-                <td> Miles > 16</td>
-                <td>@trainingPlan.PlanMetrics.MilesOver16</td>
-            </tr>
-        </table>
+                    <tbody>
+                        <tr>
+                            <td></td>
+
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnActivityChanged="OnActivityChanged" /></td>
+                            <td><ActivitySelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnActivityChanged="OnActivityChanged" /></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td></td>
+
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td><EffortSelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnEffortChanged="OnEffortSelectChanged" /></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td></td>
+
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[0]" DayNumber="0" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[1]" DayNumber="1" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[2]" DayNumber="2" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[3]" DayNumber="3" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[4]" DayNumber="4" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[5]" DayNumber="5" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td><DistanceSelect DayConfig="trainingPlan.DayConfigs[6]" DayNumber="6" OnDistanceChanged="OnDistanceTypeChanged" /></td>
+                            <td></td>
+
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="row">
+                    <div class="col-10">
+                        <span class="text-muted">Schedule</span>                       
 
 
-        <input @bind="@trainingPlan.LongRunMaxDistance" @bind:event="oninput" />
-        @trainingPlan.LongRunMaxDistance
-    </div>
-</div>
+                        <table class="table table-sm bg-white border activity-table mt-2">
+
+                            <tr>
+                                <th>Week</th>
+                                <th>Mon</th>
+                                <th>Tue</th>
+                                <th>Wed</th>
+                                <th>Thu</th>
+                                <th>Fri</th>
+                                <th>Sat</th>
+                                <th>Sun</th>
+                                <th></th>
+                            </tr>
+                            <tbody>
+                                @foreach (var week in trainingPlan.Weeks)
+                                {
+
+                                    <tr>
+                                        <td>@week.WeekNumber</td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[0]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[1]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[2]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[3]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[4]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[5]" Week="week" />
+                                        </td>
+                                        <td>
+                                            <DaySummary DayConfig="trainingPlan.DayConfigs[6]" Week="week" />
+                                        </td>
+                                        <td></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+
+                    </div>
+                    <div class="col-2">
+                        <span class="text-muted"> Stats</span>
+
+                        <div class="mt-2">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td>  Runs > 16: </td>
+                                    <td>@trainingPlan.PlanMetrics.RunsOver16</td>
+                                </tr>
+                                <tr>
+                                    <td>  Runs > 20: </td>
+                                    <td>@trainingPlan.PlanMetrics.RunsOver20</td>
+                                </tr>
+                                <tr>
+                                    <td> Miles > 16</td>
+                                    <td>@trainingPlan.PlanMetrics.MilesOver16</td>
+                                </tr>
+                            </table>
+
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+        </div>
+
+          
+        </div>
+        
 
 
 @code {

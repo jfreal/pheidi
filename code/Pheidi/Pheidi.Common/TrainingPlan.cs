@@ -33,16 +33,6 @@ namespace Pheidi.Common
 
         public int MinRunDistance { get; set; } = 2;
 
-    //    dayConfigs: DayConfig[];
-    //marathonDate: Date;
-    //numberOfWeeks: number = 18;
-    //generatedWeeks: Week[];
-    //weeksOfTaper: number = 3;
-    //lastLongRunDistance: number = 20;
-    //longRunDay: number = 6;
-    //minimumRunDistance: number = 3;
-
-
         public void Generate()
         {
             var lastLongRunWeek = this.NumberOfWeeks - this.WeeksOfTaper;
@@ -117,11 +107,6 @@ namespace Pheidi.Common
                var halfOfTheLongestRun = (this.LongRunMaxDistance / 2);
 
                var midWeekRun = halfOfTheLongestRun - ((i + 1) * 2);
-
-                // var taperDistance = Math.floor(lastLongRunWeek / 2) + 1;
-
-                //var indexOfWeekToClone = Math.floor((lastLongRunWeek / 2) - 1);
-                // var weekToClone = weeks[indexOfWeekToClone];
 
                 halfWay = halfWay / 2;
 
