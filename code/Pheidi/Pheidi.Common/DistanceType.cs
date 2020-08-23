@@ -6,6 +6,6 @@
         Half,
         Quarter,
         QuarterUp,
-        None = 0
+        None
     }
 }

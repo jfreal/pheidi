@@ -1,14 +1,14 @@
 ﻿<div class="dropdown">
     <button class="btn btn-type dropdown-toggle border" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-        @DayConfig.Activity.ToString()
+        <i class="@Pheidi.Blazor.Shared.IconMapping.Activity[DayConfig.Activity].Icon"></i> 
     </button>
     <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Rest))"><i class="fas fa-bed fa-fw"></i>REST</a>
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Run))"><i class="fas fa-running fa-fw"></i>RUN</a>
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Sprint))"><i class="fas fa-tachometer-alt fa-fw"></i>SPRINT</a>
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Cross))"><i class="fas fa-times fa-fw"></i>CROSS</a>
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Strength))"><i class="fas fa-dumbbell fa-fw"></i>STRENGTH</a>
-        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Fartlek))"><i class="fas fa-chart-line fa-fw"></i>FARTLEK</a>        
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Rest))"> <i class="fas fa-bed fa-fw"></i>REST</a>
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Run))"> <i class="fas fa-running fa-fw"></i>RUN</a>
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Sprint))"> <i class="fas fa-tachometer-alt fa-fw"></i>SPRINT</a>
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Cross))"> <i class="fas fa-times fa-fw"></i>CROSS</a>
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Strength))"> <i class="fas fa-dumbbell fa-fw"></i>STRENGTH</a>
+        <a class="dropdown-item" @onclick="@(() => ChangeActivity(Pheidi.Common.Activity.Fartlek))"> <i class="fas fa-chart-line fa-fw"></i>FARTLEK</a>        
     </div>
 </div>
 

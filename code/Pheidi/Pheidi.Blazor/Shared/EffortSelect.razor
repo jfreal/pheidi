@@ -2,15 +2,14 @@
 {
     <div class="dropdown">
         <button class="btn btn-type dropdown-toggle border" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            @DayConfig.EffortType.ToString()
+            <i class="@Pheidi.Blazor.Shared.IconMapping.EffortType[DayConfig.EffortType].Icon"></i>
         </button>
         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
             <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Distance))"><i class="fas fa-road"></i>Distance</a>
-            <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Time))"><i class="fas fa-stopwatch-20"></i>Time</a>
+            <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Time))"><i class="far fa-clock"></i>Time</a>
             <a class="dropdown-item" @onclick="@(() => ChangeActivity(EffortType.Reps))"><i class="fas fa-tachometer-alt fa-fw"></i>Reps</a>
         </div>
     </div>
-
 }
 
 @code {
