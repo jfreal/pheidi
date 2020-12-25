@@ -1,11 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Pheidi.Common
 {
     public class TrainingPlan
     {
+        public void SetLong(Week week, decimal longRunDistance)
+        {
+            var longDistance = Math.Max(longRunDistance, this.MinRunDistance);           
+
+            week.Distances[DistanceType.Half] = longDistance / 2m;
+            week.Distances[DistanceType.Long] = longDistance;
+            week.Distances[DistanceType.Quarter] = longDistance / 4m;
+        }
+
         public DayConfig[] DayConfigs { get; }
 
         public TrainingPlan()
@@ -35,100 +45,155 @@ namespace Pheidi.Common
 
         public void Generate()
         {
-            var lastLongRunWeek = this.NumberOfWeeks - this.WeeksOfTaper;
+            Weeks.Clear();
 
+            var lastLongRunWeekNumber = 1 + this.WeeksOfTaper;
 
-            for (int i = this.NumberOfWeeks - 1; i >= 0; i--)
+            var newWeeks = new List<Week>();
+
+            //initial week generation
+            for (int i = this.NumberOfWeeks; i != 0; i--)
             {
+                var newWeek = new Week(i);
 
-                var week = new Week(i + 1);
-    
-                var nextWeek = Weeks.FirstOrDefault(w => w.WeekNumber == week.WeekNumber + 1);
+                newWeeks.Add(newWeek);
 
-               var weeksUntilLongRun = lastLongRunWeek - week.WeekNumber;
-
-               var longWeek = weeksUntilLongRun % 2 == 0;
-
-                // -1 is marathon week
-                if (week.WeekNumber == lastLongRunWeek)
+                if(i <= this.WeeksOfTaper)
                 {
-                    week.LastLongRun = true;
-                    week.Distances[DistanceType.Long] = this.LongRunMaxDistance;
+                    newWeek.Taper = true;
                 }
-                else
-                {
-
-                    if (longWeek && week.WeekNumber < lastLongRunWeek)
-                    {
-                        week.Distances[DistanceType.Long] = this.LongRunMaxDistance - weeksUntilLongRun;
-                    }
-
-                    //longest run generation
-                    if (!longWeek && week.WeekNumber < lastLongRunWeek)
-                    {
-                       var recoveryDistance = 6;
-
-                        if (week.WeekNumber < this.NumberOfWeeks / 2)
-                        {
-                            recoveryDistance = 5;
-                        }
-
-    
-                        week.Distances[DistanceType.Long] = nextWeek.Distances[DistanceType.Long] - recoveryDistance;
-                    }
-                }
-
-                //mid week generation
-                if (week.WeekNumber == lastLongRunWeek)
-                {
-                    week.Distances[DistanceType.Half] = this.LongRunMaxDistance / 2;
-                    week.Distances[DistanceType.Quarter] = (int)Math.Max(this.LongRunMaxDistance / 2m / 2m, this.MinRunDistance);
-                }
-                else
-                {
-
-                   var incrementedHalf = (int)Math.Ceiling((week.WeekNumber / 2m) + 2);
-
-                    week.Distances[DistanceType.Half] = incrementedHalf;
-                    week.Distances[DistanceType.Quarter] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
-                    week.Distances[DistanceType.QuarterUp] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
-                }
-
-                Weeks.Add(week);
             }
 
-            Weeks.Reverse();
-
-            //TAPER
-           var halfWay = this.NumberOfWeeks - this.WeeksOfTaper;
-            for (var i = 0; i < this.WeeksOfTaper; i++)
+            newWeeks.Single(_ => _.WeekNumber == lastLongRunWeekNumber).LastLongRun = true;
+            
+            //Set long runs by starting at the longest week and then ramping down.
+            for (int i = lastLongRunWeekNumber; i <= this.NumberOfWeeks; i += 2)
             {
+                var iteratedWeek = newWeeks.Single(_ => _.WeekNumber == i);
 
-               var halfOfTheLongestRun = (this.LongRunMaxDistance / 2);
-
-               var midWeekRun = halfOfTheLongestRun - ((i + 1) * 2);
-
-                halfWay = halfWay / 2;
-
-               var halfWayWeek = Weeks[halfWay - 1];
-
-               var taperWeek = Weeks[this.NumberOfWeeks - this.WeeksOfTaper + i];
-
-                taperWeek.Taper = true;
-
-                //0 2 1
-                //1 4 2
-                //2 6 3
-
-                taperWeek.Distances[DistanceType.Half] = midWeekRun;
-                taperWeek.Distances[DistanceType.QuarterUp] = (int)Math.Round(midWeekRun / 2m);
-                taperWeek.Distances[DistanceType.Quarter] = (int)Math.Ceiling(midWeekRun / 2m);
-
-                if (halfWayWeek.Distances.ContainsKey(DistanceType.Long))
+                if (iteratedWeek.Taper)
                 {
-                    taperWeek.Distances[DistanceType.Long] = halfWayWeek.Distances[DistanceType.Long];
+                    continue;
                 }
+
+                SetLong(iteratedWeek, (this.LongRunMaxDistance - (this.RampUp * (i - lastLongRunWeekNumber))));
             }
+
+            //var numberOfRampDownWeeks = this.RampUp 
+
+            //set recovery runs by taking the first week and setting the long run three weeks out
+            for (int i = this.NumberOfWeeks; i >= lastLongRunWeekNumber; i -= 2)
+            {
+                var iteratedWeek = newWeeks.Single(_ => _.WeekNumber == i);              
+
+                var threeWeeksLater = newWeeks.Single(_ => _.WeekNumber == i - 3);
+
+                if (threeWeeksLater.Taper || iteratedWeek.Distances[DistanceType.Long] == 0)
+                {
+                    continue;
+                }
+
+                SetLong(threeWeeksLater,iteratedWeek.Distances[DistanceType.Long]);
+            }
+
+            //because of how the code works there will be a non taper week without a long run
+            //lets set that to the shortest long run, minus two ramps
+            var shortestLongRun = newWeeks.Where(_ => !_.Taper && _.Distances[DistanceType.Long] != 0).OrderBy(_ => _.Distances[DistanceType.Long]);
+
+            var zeroWeek = newWeeks.Single(_ => !_.Taper && _.Distances[DistanceType.Long] == 0);
+            this.SetLong(zeroWeek, shortestLongRun.First().Distances[DistanceType.Long] - (2 * this.RampUp));
+
+
+            //for (int i = this.NumberOfWeeks - 1 - this.WeeksOfTaper; i >= 0; i--)
+            //{
+            //    var week = new Week(i + 1);
+
+            //    var nextWeek = Weeks.FirstOrDefault(w => w.WeekNumber == week.WeekNumber + 1);
+
+            //   var weeksUntilLongRun = lastLongRunWeekNumber - week.WeekNumber;
+
+            //   var longWeek = weeksUntilLongRun % 2 == 0;
+
+            //    // -1 is marathon week
+            //    if (week.WeekNumber == lastLongRunWeekNumber)
+            //    {
+            //        week.LastLongRun = true;
+            //        week.Distances[DistanceType.Long] = this.LongRunMaxDistance;
+            //    }
+            //    else
+            //    {
+
+            //        if (longWeek && week.WeekNumber < lastLongRunWeekNumber)
+            //        {
+            //            week.Distances[DistanceType.Long] = this.LongRunMaxDistance - weeksUntilLongRun;
+            //        }
+
+            //        //longest run generation
+            //        if (!longWeek && week.WeekNumber < lastLongRunWeekNumber)
+            //        {
+            //           var recoveryDistance = 6;
+
+            //            if (week.WeekNumber < this.NumberOfWeeks / 2)
+            //            {
+            //                recoveryDistance = 5;
+            //            }
+
+
+            //            week.Distances[DistanceType.Long] = nextWeek.Distances[DistanceType.Long] - recoveryDistance;
+            //        }
+            //    }
+
+            //    //mid week generation
+            //    if (week.WeekNumber == lastLongRunWeekNumber)
+            //    {
+            //        week.Distances[DistanceType.Half] = this.LongRunMaxDistance / 2;
+            //        week.Distances[DistanceType.Quarter] = (int)Math.Max(this.LongRunMaxDistance / 2m / 2m, this.MinRunDistance);
+            //    }
+            //    else
+            //    {
+
+            //       var incrementedHalf = (int)Math.Ceiling((week.WeekNumber / 2m) + 2);
+
+            //        week.Distances[DistanceType.Half] = incrementedHalf;
+            //        week.Distances[DistanceType.Quarter] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
+            //        week.Distances[DistanceType.QuarterUp] = Math.Max(incrementedHalf / 2, this.MinRunDistance);
+            //    }
+
+            //    Weeks.Add(week);
+            //}
+
+            Weeks = newWeeks;
+
+           // //TAPER
+           //var halfWay = this.NumberOfWeeks - this.WeeksOfTaper;
+           // for (var i = 0; i < this.WeeksOfTaper; i++)
+           // {
+
+           //    var halfOfTheLongestRun = (this.LongRunMaxDistance / 2);
+
+           //    var midWeekRun = halfOfTheLongestRun - ((i + 1) * 2);
+
+           //     halfWay = halfWay / 2;
+
+           //    var halfWayWeek = Weeks[halfWay - 1];
+
+           //    var taperWeek = Weeks[this.NumberOfWeeks - this.WeeksOfTaper + i];
+
+           //     taperWeek.Taper = true;
+
+           //     //0 2 1
+           //     //1 4 2
+           //     //2 6 3
+
+           //     taperWeek.Distances[DistanceType.Half] = midWeekRun;
+           //     taperWeek.Distances[DistanceType.QuarterUp] = (int)Math.Round(midWeekRun / 2m);
+           //     taperWeek.Distances[DistanceType.Quarter] = (int)Math.Ceiling(midWeekRun / 2m);
+
+           //     if (halfWayWeek.Distances.ContainsKey(DistanceType.Long))
+           //     {
+           //         taperWeek.Distances[DistanceType.Long] = halfWayWeek.Distances[DistanceType.Long];
+           //     }
+           // }
 
             //if (this.marathonDate)
             //{
@@ -170,6 +235,8 @@ namespace Pheidi.Common
                 return metrics;
             }            
         }
+
+        public int RampUp { get; private set; } = 1;
     }
 
     public class PlanMetrics
