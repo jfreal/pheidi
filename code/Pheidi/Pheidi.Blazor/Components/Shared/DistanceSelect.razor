@@ -1,0 +1,26 @@
+<div class="btn-group">
+    <button type="button" data-bs-toggle="dropdown" aria-expanded="false" class="btn btn-type dropdown-toggle border">
+        @IconMapping.DistanceType[DayConfig.DistanceType].Name
+    </button>
+
+    <div class="dropdown-menu">
+        @foreach (var (distanceType, mapping) in IconMapping.DistanceType)
+        {
+            <a class="dropdown-item" @onclick="@(() => SelectDistance(distanceType))">@mapping.Name</a>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DayConfig DayConfig { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private void SelectDistance(DistanceType distanceType)
+    {
+        DayConfig.DistanceType = distanceType;
+        OnChanged.InvokeAsync();
+    }
+}

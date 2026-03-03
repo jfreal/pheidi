@@ -1,12 +1,11 @@
-﻿namespace Pheidi.Common
+namespace Pheidi.Common;
+
+public enum Activity
 {
-    public enum Activity
-    {
-        Rest,
-        Run,
-        Sprint,
-        Cross,
-        Strength,
-        Fartlek
-    }
+    Rest,
+    Run,
+    Sprint,
+    Cross,
+    Strength,
+    Fartlek
 }

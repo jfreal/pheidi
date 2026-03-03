@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<div class="container">
+    <ErrorBoundary>
+        <ChildContent>
+            @Body
+        </ChildContent>
+        <ErrorContent>
+            <div class="alert alert-danger mt-4">
+                <h4>Something went wrong</h4>
+                <p>An unexpected error occurred. Please try refreshing the page.</p>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+</div>

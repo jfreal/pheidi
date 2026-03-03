@@ -1,0 +1,27 @@
+<div class="dropdown">
+    <button class="btn btn-type dropdown-toggle border" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="@IconMapping.Activity[DayConfig.Activity].Icon"></i>
+    </button>
+    <div class="dropdown-menu">
+        @foreach (var (activity, mapping) in IconMapping.Activity)
+        {
+            <a class="dropdown-item" @onclick="@(() => SelectActivity(activity))">
+                <i class="@mapping.Icon"></i> @mapping.Name
+            </a>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public DayConfig DayConfig { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private void SelectActivity(Activity activity)
+    {
+        DayConfig.Activity = activity;
+        OnChanged.InvokeAsync();
+    }
+}

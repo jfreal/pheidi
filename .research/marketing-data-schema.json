@@ -1,0 +1,150 @@
+{
+  "marketing_metrics": {
+    "per_user_trackable": {
+      "total_distance_trained_km": {
+        "type": "number",
+        "description": "Cumulative kilometers run during training",
+        "marketing_use": "User achievements, social sharing, testimonials"
+      },
+      "total_training_days": {
+        "type": "number",
+        "description": "Number of days the user completed a workout",
+        "marketing_use": "Engagement metrics, retention analysis"
+      },
+      "plan_completion_rate_pct": {
+        "type": "number",
+        "description": "Percentage of scheduled workouts completed",
+        "marketing_use": "Product effectiveness claims, case studies"
+      },
+      "longest_run_achieved_km": {
+        "type": "number",
+        "description": "User's longest single run during the plan",
+        "marketing_use": "Milestone celebrations, social sharing"
+      },
+      "current_streak_days": {
+        "type": "number",
+        "description": "Consecutive days with completed workouts",
+        "marketing_use": "Gamification, engagement, push notifications"
+      },
+      "best_streak_days": {
+        "type": "number",
+        "description": "All-time best consecutive training day streak",
+        "marketing_use": "Year-in-review, achievements"
+      },
+      "weeks_trained": {
+        "type": "number",
+        "description": "Total weeks actively training",
+        "marketing_use": "Commitment metrics"
+      },
+      "missed_days_recovered": {
+        "type": "number",
+        "description": "Number of times the app successfully rescheduled around missed days",
+        "marketing_use": "Key differentiator — 'life-proof training plans'"
+      },
+      "holidays_navigated": {
+        "type": "number",
+        "description": "Number of holidays the plan auto-adjusted around",
+        "marketing_use": "Feature promotion — 'training that fits your life'"
+      },
+      "schedule_adjustments_made": {
+        "type": "number",
+        "description": "Total plan modifications (reschedules, swaps, deloads triggered)",
+        "marketing_use": "Intelligence/adaptiveness of the platform"
+      },
+      "race_distance": {
+        "type": "string",
+        "description": "Target race distance",
+        "marketing_use": "User segmentation, targeted campaigns"
+      },
+      "skill_level_at_start": {
+        "type": "string",
+        "description": "Assessed skill level when plan was created",
+        "marketing_use": "Segmentation, progression stories"
+      },
+      "skill_level_progression": {
+        "type": "string",
+        "description": "If user re-assessed at higher level after completing a plan",
+        "marketing_use": "Transformation stories, testimonials"
+      }
+    },
+    "aggregate_dashboard": {
+      "total_users": {
+        "type": "number",
+        "marketing_use": "Social proof, press releases"
+      },
+      "total_plans_generated": {
+        "type": "number",
+        "marketing_use": "Platform scale metrics"
+      },
+      "total_km_trained_all_users": {
+        "type": "number",
+        "marketing_use": "Community impact — 'Our runners have covered X km together'"
+      },
+      "avg_plan_completion_rate": {
+        "type": "number",
+        "marketing_use": "Product effectiveness — 'X% of users complete their training plan'"
+      },
+      "most_popular_distance": {
+        "type": "string",
+        "marketing_use": "Content strategy, feature prioritization"
+      },
+      "most_popular_skill_level": {
+        "type": "string",
+        "marketing_use": "Audience targeting"
+      },
+      "avg_missed_days_per_plan": {
+        "type": "number",
+        "marketing_use": "Realism — 'even with X missed days, Y% still finish their plan'"
+      },
+      "pct_users_completed_plan": {
+        "type": "number",
+        "marketing_use": "Conversion/success rate"
+      },
+      "total_holidays_handled": {
+        "type": "number",
+        "marketing_use": "Feature promotion"
+      },
+      "total_schedule_adjustments": {
+        "type": "number",
+        "marketing_use": "AI/smart scheduling feature validation"
+      },
+      "user_retention_rate_weekly": {
+        "type": "number",
+        "marketing_use": "Investor metrics, growth analysis"
+      }
+    },
+    "shareable_achievement_templates": [
+      "I've run {total_km} km training for my first {race_distance} with [App Name]!",
+      "{streak}-day training streak and counting!",
+      "Week {week_number} of {total_weeks} done — {pct_complete}% through my {race_distance} plan!",
+      "Just hit my longest run ever: {longest_run_km} km!",
+      "My plan adjusted around {holidays_count} holidays and I'm still on track!",
+      "{plans_completed} training plans completed. Next up: {next_race_distance}!",
+      "From couch to {race_distance} start line in {weeks_trained} weeks!"
+    ],
+    "marketing_copy_data_points": {
+      "value_propositions": [
+        {
+          "claim": "Life-proof training plans",
+          "data_source": "missed_days_recovered + holidays_navigated",
+          "example": "Our plans adapted around 50,000+ holidays and missed days last year"
+        },
+        {
+          "claim": "Evidence-based progression",
+          "data_source": "Referenced research studies",
+          "example": "Built on research from 5,200+ runners, not arbitrary rules"
+        },
+        {
+          "claim": "High completion rates",
+          "data_source": "pct_users_completed_plan",
+          "example": "X% of our users cross the finish line"
+        },
+        {
+          "claim": "For every runner",
+          "data_source": "skill_level distribution",
+          "example": "From first-time 5K to sub-3 marathon — plans for every level"
+        }
+      ]
+    }
+  }
+}

@@ -1,10 +1,9 @@
-﻿namespace Pheidi.Common
+namespace Pheidi.Common;
+
+public enum EffortType
 {
-    public enum EffortType
-    {
-       Distance,
-       Time,
-       Reps,
-        None
-    }
+    Distance,
+    Time,
+    Reps,
+    None
 }

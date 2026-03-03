@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs ls -lh)",
+      "Bash(git -C /c/Users/John/source/repos/jfreal/pheidi log --oneline -15)"
+    ]
+  }
+}

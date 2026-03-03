@@ -1,18 +1,17 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace Pheidi.Common.Tests
+namespace Pheidi.Common.Tests;
+
+[TestClass]
+public class TrainingPlanTests
 {
-    [TestClass]
-    public class TrainingPlanTests
+    [TestMethod]
+    public void TheBasicPlanHas4RunsOver16Miles()
     {
-        [TestMethod]
-        public void TheBasicPlanHas2RunsOver16Miles()
-        {
-            var trainingPlan = new TrainingPlan();
+        var trainingPlan = new TrainingPlan();
 
-            trainingPlan.Generate();
+        trainingPlan.Generate();
 
-            Assert.AreEqual(trainingPlan.PlanMetrics.RunsOver16, 3);
-        }
+        Assert.AreEqual(4, trainingPlan.PlanMetrics.RunsOver16);
     }
 }

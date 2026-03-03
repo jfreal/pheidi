@@ -1,11 +1,10 @@
-﻿namespace Pheidi.Common
+namespace Pheidi.Common;
+
+public enum DistanceType
 {
-    public enum DistanceType
-    {
-        Long,
-        Half,
-        Quarter,
-        QuarterUp,
-        None
-    }
+    Long,
+    Half,
+    Quarter,
+    QuarterUp,
+    None
 }

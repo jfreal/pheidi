@@ -1,0 +1,12 @@
+@if (DayConfig.Activity == Activity.Run && Week.Distances.ContainsKey(DayConfig.DistanceType))
+{
+    <input value="@Week.Distances[DayConfig.DistanceType]" class="form-control" />
+}
+
+@code {
+    [Parameter]
+    public DayConfig DayConfig { get; set; } = default!;
+
+    [Parameter]
+    public Week Week { get; set; } = default!;
+}
