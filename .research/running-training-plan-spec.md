@@ -4387,6 +4387,596 @@ def assess_skill_level(user_profile):
 
 ---
 
+## 8B. Workout Logging, Completion & Feedback
+
+This section defines how runners record completed workouts, how the app
+captures what actually happened (vs what was planned), and how that data
+feeds back into the plan generator. This is the core execution loop —
+the plan generates workouts, the runner does them, the app records results,
+and the plan adapts.
+
+### 8B.1 Workout Completion Methods
+
+```python
+WORKOUT_COMPLETION_METHODS = {
+    "method_1_auto_sync": {
+        "label": "Auto-sync from connected platform",
+        "description": (
+            "The app detects a matching workout from Strava, Garmin, or "
+            "Apple Health and auto-matches it to today's planned workout. "
+            "No user action required."
+        ),
+        "platforms": ["strava", "garmin_connect", "apple_health"],
+        "matching_logic": {
+            "match_by": ["date", "activity_type", "approximate_distance"],
+            "tolerance": "±20% distance, same day",
+            "ambiguity_handling": (
+                "If multiple activities on the same day, show the user "
+                "a list and let them pick which maps to the planned workout."
+            )
+        },
+        "auto_captured_data": [
+            "actual_distance_km",
+            "actual_duration_minutes",
+            "actual_pace_per_km",
+            "average_heart_rate",
+            "max_heart_rate",
+            "elevation_gain_m",
+            "splits_per_km",
+            "cadence",
+            "calories_estimated",
+            "route_map"            # from GPS data
+        ]
+    },
+
+    "method_2_in_app_tracking": {
+        "label": "Track with the app (GPS)",
+        "description": (
+            "User taps 'Start Workout' in the app and the phone tracks "
+            "distance, pace, and duration via GPS. Includes in-run "
+            "notifications (Section 12.6)."
+        ),
+        "captured_data": [
+            "actual_distance_km",
+            "actual_duration_minutes",
+            "actual_pace_per_km",
+            "splits_per_km",
+            "route_map",
+            "elevation_gain_m"
+        ],
+        "notes": (
+            "The app is NOT trying to replace Strava or Garmin as a GPS "
+            "tracker. This is a lightweight option for users who don't "
+            "use another platform. It should work but doesn't need to be "
+            "best-in-class GPS tracking."
+        )
+    },
+
+    "method_3_manual_entry": {
+        "label": "Log it manually",
+        "description": (
+            "User taps 'Mark Complete' and enters what they did. "
+            "Quick entry: just tap 'Done'. Detailed entry: add distance, "
+            "time, pace, and notes."
+        ),
+        "input_fields": {
+            "required": [],          # nothing required — just tapping 'Done' is enough
+            "optional": [
+                "actual_distance_km",
+                "actual_duration_minutes",
+                "actual_pace_per_km",
+                "heart_rate_average",
+                "surface (road / trail / treadmill / track)",
+                "notes"
+            ]
+        },
+        "quick_complete": {
+            "description": (
+                "One-tap completion. User just taps 'Done' with no data entry. "
+                "The app assumes the workout was completed as planned. This is "
+                "the LOWEST FRICTION option — critical for retention."
+            ),
+            "when_to_use": (
+                "Many runners, especially beginners, won't log detailed data. "
+                "That's fine. A completed workout with no data is infinitely "
+                "better than an uncompleted one."
+            )
+        }
+    },
+
+    "method_4_partial_completion": {
+        "label": "I did some of it",
+        "description": (
+            "User ran but didn't complete the full planned workout. "
+            "The app should make it easy to log partial workouts without "
+            "making the user feel like they failed."
+        ),
+        "input": "Slider or quick-pick: 25% / 50% / 75% / custom",
+        "message": "You got out there — that's what counts. Logging what you did.",
+        "plan_effect": (
+            "Partial completion is tracked. If a user consistently does "
+            "~75% of planned volume, the plan generator may silently reduce "
+            "future targets to match actual capacity."
+        )
+    }
+}
+```
+
+### 8B.2 Post-Workout Feedback
+
+After completing a workout, the app optionally asks for quick feedback.
+This data feeds the adaptive plan engine.
+
+```python
+POST_WORKOUT_FEEDBACK = {
+    "description": (
+        "Brief, optional feedback after each workout. Should take "
+        "less than 10 seconds. The app learns from this data to "
+        "adjust future workouts."
+    ),
+
+    "prompt_timing": "Immediately after marking workout complete",
+    "required": False,  # never force feedback
+    "skip_option": True,  # always show 'Skip' button
+
+    "questions": {
+        "effort_rating": {
+            "question": "How did that feel?",
+            "options": [
+                {"label": "Too easy", "value": -1,
+                 "effect": "Plan may increase next similar workout by 5%"},
+                {"label": "Just right", "value": 0,
+                 "effect": "No adjustment — plan is calibrated well"},
+                {"label": "Hard but doable", "value": 1,
+                 "effect": "No adjustment — this is the target zone"},
+                {"label": "Too hard", "value": 2,
+                 "effect": "Plan may reduce next similar workout by 5-10%"}
+            ],
+            "display": "4 buttons, one tap"
+        },
+
+        "energy_level": {
+            "question": "Energy level today?",
+            "options": [
+                {"label": "Low", "value": 1},
+                {"label": "Normal", "value": 2},
+                {"label": "High", "value": 3}
+            ],
+            "display": "3 buttons, shown only 2x per week to avoid fatigue",
+            "frequency": "every_3rd_workout"
+        },
+
+        "free_notes": {
+            "question": "Anything to note? (optional)",
+            "input": "Free text, max 200 chars",
+            "display": "Collapsible — hidden by default",
+            "examples": "Course was hilly, felt great, legs heavy today"
+        }
+    },
+
+    "adaptive_response": {
+        "description": (
+            "When multiple 'too hard' ratings accumulate (3+ in 2 weeks), "
+            "the plan generator triggers a recalibration — silently reducing "
+            "pace targets and/or volume by 5-10%. When multiple 'too easy' "
+            "ratings accumulate, it may increase targets."
+        ),
+        "threshold_to_adjust": {
+            "too_hard": "3 out of last 6 workouts rated 'too hard'",
+            "too_easy": "4 out of last 6 workouts rated 'too easy'"
+        },
+        "adjustment_cap": "Never adjust more than 10% in a single recalibration",
+        "user_notification": (
+            "We've noticed your recent workouts have felt {hard/easy}. "
+            "We've fine-tuned your upcoming targets to match your current fitness."
+        )
+    }
+}
+```
+
+### 8B.3 Workout Result Data Model
+
+```typescript
+interface WorkoutResult {
+  id: string;
+  plan_id: string;
+  scheduled_workout_id: string;
+  user_id: string;
+  completed_at: Date;
+
+  // Completion method
+  completion_method: "auto_sync" | "in_app_gps" | "manual" | "quick_complete";
+  sync_source: "strava" | "garmin" | "apple_health" | null;
+  external_activity_id: string | null;
+
+  // Planned vs Actual
+  planned_distance_km: number;
+  actual_distance_km: number | null;    // null if quick-complete
+  planned_duration_min: number;
+  actual_duration_min: number | null;
+  planned_pace_sec_per_km: number;
+  actual_pace_sec_per_km: number | null;
+
+  // Optional data (from sync or manual)
+  average_heart_rate: number | null;
+  max_heart_rate: number | null;
+  elevation_gain_m: number | null;
+  cadence_avg: number | null;
+  splits: Split[] | null;
+  route_polyline: string | null;       // encoded polyline from GPS
+  surface: "road" | "trail" | "treadmill" | "track" | "grass" | null;
+
+  // Feedback
+  effort_rating: -1 | 0 | 1 | 2 | null;  // too easy / just right / hard / too hard
+  energy_level: 1 | 2 | 3 | null;
+  notes: string | null;
+
+  // Weather (auto-captured at workout time)
+  weather_at_workout: {
+    temperature_c: number;
+    humidity_pct: number;
+    wind_speed_kmh: number;
+    conditions: string;                 // "clear", "rain", "overcast", etc.
+  } | null;
+
+  // Partial completion
+  completion_percentage: number;        // 1.0 = full, 0.75 = partial, etc.
+  partial_reason: string | null;
+
+  // Injury check
+  pain_check_in: PainCheckIn | null;   // if injury was active
+}
+
+interface Split {
+  km_number: number;
+  pace_sec_per_km: number;
+  heart_rate_avg: number | null;
+  elevation_change_m: number | null;
+}
+```
+
+### 8B.4 Ongoing Platform Sync (Auto-Completion) — DEFERRED TO V2
+
+> **This feature has been moved to V2.** See `running-training-plan-v2-features.md`, Section V2-1 for full details.
+>
+> **V1 behavior**: Users log workouts via the 4 completion methods in Section 8B.1 (auto-sync from watch app, in-app GPS tracking, manual entry, or partial completion with one-tap quick-complete). One-time history import from Strava/Garmin/Apple Health is available at onboarding (Section 12.8).
+>
+> **V2 addition**: Always-on background sync that continuously watches connected platforms for new activities and auto-matches them to planned workouts.
+
+### 8B.5 Same-Day Rescheduling ("Not Today" Flow)
+
+```python
+def handle_not_today(plan, today, user_reason=None):
+    """
+    The most common real-world scenario: user wakes up and can't/won't
+    run today. They want to move today's workout to another day THIS WEEK
+    proactively, before the day ends.
+
+    This is DIFFERENT from the missed-day algorithm (Section 6.3), which
+    runs after the fact. This is proactive rescheduling.
+    """
+    todays_workout = get_workout_on_date(plan, today)
+
+    if todays_workout is None:
+        return {"status": "already_rest", "message": "Today is already a rest day."}
+
+    # Find available slots this week
+    remaining_days = get_remaining_days_this_week(plan, today)
+    available_slots = [
+        day for day in remaining_days
+        if day.workout is None or day.workout.type in ["rest_day", "easy_run"]
+    ]
+
+    if not available_slots:
+        # No room to move — offer to skip or do a shorter version
+        return {
+            "status": "no_room",
+            "options": [
+                {
+                    "label": "Skip it",
+                    "action": "skip",
+                    "message": "No worries — one missed workout won't affect your plan."
+                },
+                {
+                    "label": "Do a shorter version",
+                    "action": "shorten",
+                    "message": (
+                        "Even 15 minutes counts. We'll adapt the workout "
+                        "to whatever time you have."
+                    ),
+                    "shortened_workout": fit_to_time_budget(todays_workout, 20)
+                }
+            ]
+        }
+
+    # Offer available days to move to
+    move_options = []
+    for day in available_slots:
+        # Check swap rules (hard/easy spacing)
+        valid = check_swap_rules(plan, today, day.date, todays_workout)
+        move_options.append({
+            "date": day.date,
+            "day_name": day.day_name,
+            "valid": valid["ok"],
+            "warning": valid.get("warning"),
+            "would_replace": day.workout.type if day.workout else "rest day"
+        })
+
+    return {
+        "status": "can_move",
+        "workout": todays_workout.summary,
+        "options": move_options,
+        "skip_option": {
+            "label": "Just skip it",
+            "message": "No worries — one day won't make or break your plan."
+        },
+        "message": "Can't make it today? No problem. Where should we move it?"
+    }
+```
+
+### 8B.6 Surface & Terrain Preferences
+
+```python
+SURFACE_PREFERENCES = {
+    "description": (
+        "Where a runner trains affects workout selection and injury risk. "
+        "The plan generator uses surface preferences to make smarter "
+        "workout placement decisions."
+    ),
+
+    "user_config": {
+        "primary_surface": {
+            "options": ["road", "trail", "treadmill", "track", "mixed"],
+            "default": "road"
+        },
+        "has_treadmill_access": {
+            "type": "boolean",
+            "default": False,
+            "effect": (
+                "If True, bad weather days suggest treadmill instead of skip. "
+                "If False, bad weather = reschedule or skip."
+            )
+        },
+        "has_track_access": {
+            "type": "boolean",
+            "default": False,
+            "effect": (
+                "If True, interval workouts can specify track. "
+                "If False, intervals are road-based or treadmill-based."
+            )
+        },
+        "has_hill_access": {
+            "type": "boolean",
+            "default": True,
+            "effect": (
+                "If False, hill repeats are replaced with treadmill incline "
+                "or bridge/overpass repeats or removed from plan."
+            )
+        },
+        "trail_experience": {
+            "options": ["none", "some", "experienced"],
+            "default": "none",
+            "effect": (
+                "Trail running requires different pacing (ignore pace targets, "
+                "use effort/time instead). Trail long runs are slower but "
+                "provide excellent strength benefits."
+            )
+        }
+    },
+
+    "surface_based_workout_placement": {
+        "track": ["interval_800m", "interval_1600m", "ladder_intervals", "pyramid_intervals"],
+        "road": ["easy_run", "tempo_run", "long_run", "fartlek"],
+        "trail": ["easy_run", "long_run", "hill_repeats"],
+        "treadmill": ["easy_run", "tempo_run", "interval sessions (any)", "hill_repeats (incline)"],
+        "grass": ["strides", "fartlek", "recovery_run"]
+    },
+
+    "bad_weather_handling": {
+        "has_treadmill": {
+            "rain": "Suggest treadmill. User can override.",
+            "extreme_heat": "Strongly suggest treadmill or reschedule.",
+            "extreme_cold": "Suggest treadmill. Short easy runs outside still OK.",
+            "ice_snow": "Treadmill only. Too dangerous outside."
+        },
+        "no_treadmill": {
+            "rain": "Run as planned — rain doesn't hurt. Suggest visibility gear.",
+            "extreme_heat": "Suggest early morning or reschedule.",
+            "extreme_cold": "Layer up tips. Suggest shorter run.",
+            "ice_snow": "Reschedule or skip. Safety first."
+        }
+    }
+}
+```
+
+### 8B.7 Plan Restart & Reset
+
+```python
+PLAN_RESTART_OPTIONS = {
+    "restart_from_beginning": {
+        "description": "Start the entire plan over from Week 1.",
+        "when": (
+            "User feels they started too hard, lost too much time, "
+            "or wants a fresh start."
+        ),
+        "preserves": ["schedule preferences", "injury history", "account data"],
+        "resets": ["workout logs", "streaks", "plan progress", "mileage tracking"],
+        "recalibrate": (
+            "If restarting after completing 4+ weeks, use logged data "
+            "to recalibrate starting mileage and pace targets."
+        )
+    },
+
+    "restart_from_current_week": {
+        "description": (
+            "Keep all prior progress but regenerate remaining weeks "
+            "based on current fitness level."
+        ),
+        "when": (
+            "User came back from injury or break and wants the rest of "
+            "the plan to reflect their current state, not their old plan."
+        ),
+        "preserves": ["all prior workout logs", "streaks", "schedule"],
+        "regenerates": ["all future weeks from current week forward"],
+        "uses": "Current weekly mileage and recent paces as new baseline"
+    },
+
+    "adjust_race_date": {
+        "description": (
+            "Move the goal race to a new date. The plan stretches or "
+            "compresses accordingly."
+        ),
+        "stretch": "Add weeks — more base building, gentler progression",
+        "compress": (
+            "Remove weeks — steeper progression, validate that user's "
+            "current fitness supports it. Warn if risky."
+        ),
+        "taper_fixed": "Taper length stays the same regardless of date change"
+    },
+
+    "abandon_plan": {
+        "description": "Archive the plan without completing it.",
+        "data_preserved": "All logs, history, and injury data kept in archive",
+        "follow_up": "Offer to start a new plan or take a break",
+        "no_shame_messaging": (
+            "Plans change — that's life. Your training so far still "
+            "made you fitter. Come back when you're ready."
+        )
+    }
+}
+```
+
+### 8B.8 End-of-Plan Summary Report
+
+```python
+END_OF_PLAN_REPORT = {
+    "trigger": "Recovery phase complete (Section 3, post-race recovery)",
+    "description": (
+        "A celebration of the entire training journey. Shows the runner "
+        "how far they've come from Day 1 to Race Day."
+    ),
+
+    "report_contents": {
+        "headline_stats": [
+            "Total distance run during the plan (km/miles)",
+            "Total workouts completed",
+            "Plan completion rate (% of planned mileage achieved)",
+            "Longest single run",
+            "Peak weekly mileage",
+            "Total training days",
+            "Total hours spent running"
+        ],
+
+        "progression_charts": [
+            "Weekly mileage over time (line chart)",
+            "Easy pace improvement over time",
+            "Long run distance progression",
+            "Intensity distribution by phase"
+        ],
+
+        "milestones_achieved": (
+            "List of all milestones hit during the plan (from Section 5G.6 "
+            "and 11E): first double-digit week, longest run ever, peak week, etc."
+        ),
+
+        "race_day_recap": {
+            "race_distance": "string",
+            "finish_time": "if entered by user",
+            "predicted_time": "from race time predictor (Section 11C)",
+            "predicted_vs_actual": "comparison if both available",
+            "weather_on_race_day": "auto-captured"
+        },
+
+        "plan_adaptation_summary": (
+            "How many times the plan adapted around your life: "
+            "X holidays handled, Y schedule changes, Z injury modifications. "
+            "'Your plan bent around your life — and you still made it to the finish line.'"
+        ),
+
+        "what_next": {
+            "options": [
+                "Start a new plan for a different distance",
+                "Run the same distance again with a faster goal",
+                "Take a break — we'll keep your data for when you're ready",
+                "Share your achievement (public profile)"
+            ]
+        }
+    },
+
+    "shareability": {
+        "summary_card": (
+            "Generate a shareable image card with key stats for social media. "
+            "Respects the public profile visibility settings (Section 11D)."
+        ),
+        "formats": ["image_card_png", "link_to_public_profile"]
+    }
+}
+```
+
+### 8B.9 Offline Support
+
+```python
+OFFLINE_SUPPORT = {
+    "description": (
+        "Runners need their plan when they have no signal — on trails, "
+        "in rural areas, or in airplane mode during a race."
+    ),
+
+    "cached_locally": [
+        "Current week's workouts (always cached)",
+        "Next week's workouts (pre-cached)",
+        "Warm-up and cool-down protocols for scheduled workout types",
+        "Injury rehab exercises (if active injury)",
+        "Run/walk interval timers",
+        "Pace targets for the day's workout"
+    ],
+
+    "works_offline": [
+        "View today's workout and full week",
+        "Start a workout with in-app GPS tracking",
+        "Mark a workout as complete (manual entry)",
+        "Run/walk interval timer",
+        "View warm-up and cool-down instructions"
+    ],
+
+    "requires_connection": [
+        "Syncing with Strava/Garmin/Apple Health",
+        "Weather-adjusted pace targets",
+        "Plan modifications (schedule changes, injury reporting)",
+        "Notification delivery",
+        "Public profile and sharing"
+    ],
+
+    "sync_on_reconnect": (
+        "When connection is restored, all offline activity (completed "
+        "workouts, manual logs) syncs automatically. Conflict resolution: "
+        "if a workout was auto-synced from Strava AND manually logged "
+        "offline, prefer the Strava data (richer) and discard the manual log."
+    )
+}
+```
+
+### 8B.10 Workout Logging API Endpoints
+
+```
+POST   /api/plans/:id/workouts/:wid/complete      — Mark workout complete (any method)
+POST   /api/plans/:id/workouts/:wid/partial        — Log partial completion
+POST   /api/plans/:id/workouts/:wid/skip           — Skip a workout
+POST   /api/plans/:id/workouts/:wid/not-today      — Proactive same-day reschedule
+POST   /api/plans/:id/workouts/:wid/feedback       — Submit post-workout feedback
+GET    /api/plans/:id/workouts/:wid/result          — Get workout result data
+POST   /api/plans/:id/workouts/unplanned            — Log a workout not in the plan
+GET    /api/plans/:id/sync/status                   — Check sync status with platforms
+POST   /api/plans/:id/sync/manual                   — Trigger manual sync
+GET    /api/plans/:id/end-of-plan-report            — Generate end-of-plan summary
+PUT    /api/users/:id/surface-preferences           — Update surface/terrain preferences
+PUT    /api/plans/:id/restart                        — Restart plan (from beginning or current week)
+PUT    /api/plans/:id/adjust-race-date              — Move race date and regenerate plan
+POST   /api/plans/:id/archive                       — Archive plan without completing
+```
+
+---
+
 ## 9. Notification and Coaching Logic
 
 ### 9.1 Adaptive Messaging
@@ -4416,6 +5006,883 @@ def assess_skill_level(user_profile):
     }
   }
 }
+```
+
+---
+
+## 9B. Calendar View — The Core UI
+
+The calendar is the heart of the app. It's where runners interact with
+their plan daily. The calendar must be beautiful, informative, and adapt
+to every schedule configuration (standard weeks, non-standard cycles,
+shift patterns). It must show life happening alongside training — holidays,
+vacations, reduced weeks, injuries — and make it clear the plan bends
+around life, not the other way around.
+
+### 9B.1 Calendar Views
+
+```python
+CALENDAR_VIEWS = {
+    "daily": {
+        "description": (
+            "Single-day detail view. Shows the full workout for today "
+            "with time breakdown, warm-up/cool-down, and any notes."
+        ),
+        "displays": [
+            "Workout type and description",
+            "Full time breakdown (Section 6.6.1c): transition + warm-up + core + cool-down",
+            "Target pace / effort / HR zone",
+            "Weather-adjusted pace if applicable (Section 12.3)",
+            "Injury check-in prompt if active injury",
+            "Start workout button",
+            "Quick actions: skip, swap day, mark complete manually"
+        ],
+        "swipe_gesture": "Swipe left/right to navigate between days"
+    },
+
+    "weekly": {
+        "description": (
+            "7-day view (or N-day cycle view for non-standard schedules). "
+            "The primary planning view. At a glance, the runner sees "
+            "their entire week of training."
+        ),
+        "displays": {
+            "each_day_card": [
+                "Day name and date",
+                "Workout type (color-coded by category)",
+                "Planned distance or duration",
+                "Time of day (morning/lunch/evening icon)",
+                "Status: upcoming / completed / skipped / rescheduled",
+                "Transition time indicator (if shower needed)"
+            ],
+            "week_summary_bar": [
+                "Total planned mileage vs completed mileage",
+                "Runs completed / runs planned",
+                "Training phase label (Base / Build / Peak / Taper / Recovery)",
+                "Week number in plan (e.g., 'Week 8 of 16')",
+                "Intensity distribution mini-chart (easy/hard ratio)"
+            ],
+            "weekly_note": (
+                "Space for the plan generator to display a weekly message: "
+                "'This is your peak mileage week — you're at your strongest.' "
+                "or 'Deload week — trust the recovery.'"
+            )
+        },
+        "interactions": [
+            "Tap any day to open daily view",
+            "Long-press to drag-and-drop swap workouts between days",
+            "Swipe left/right to navigate between weeks/cycles",
+            "Pull down to see week-over-week comparison"
+        ],
+        "non_standard_cycles": (
+            "For non-7-day cycles (Section 12.7a), the weekly view shows "
+            "the full cycle length (e.g., 9 or 10 days). The header says "
+            "'Cycle 5' instead of 'Week 5'. Everything else works the same."
+        )
+    },
+
+    "monthly": {
+        "description": (
+            "Full month calendar view. Shows the big picture — training "
+            "phases, upcoming races, holidays, vacations, and overall "
+            "progression at a glance."
+        ),
+        "displays": {
+            "each_day_cell": [
+                "Small color dot indicating workout type",
+                "Completion status (filled dot = done, empty = upcoming, X = skipped)",
+                "Holiday/vacation/blocked date indicator",
+                "Injury flag if active on that day"
+            ],
+            "month_overlays": [
+                "Training phase bands (color bars spanning the phase duration)",
+                "Race day marker (prominent, unmissable)",
+                "Vacation blocks (shaded date ranges)",
+                "Holiday markers",
+                "Deload weeks (subtle background highlight)",
+                "Current day indicator"
+            ],
+            "month_summary": [
+                "Total mileage for the month",
+                "Completion rate (runs completed / runs planned)",
+                "Longest run of the month",
+                "Phase progression (e.g., 'Build → Peak transition this month')"
+            ]
+        },
+        "interactions": [
+            "Tap any day to jump to daily view",
+            "Tap a phase band to see phase description",
+            "Swipe left/right to navigate months",
+            "Pinch to zoom between monthly and weekly view"
+        ]
+    },
+
+    "plan_overview": {
+        "description": (
+            "Full plan timeline view — from start date to race day. "
+            "Shows the entire journey in one scrollable view."
+        ),
+        "displays": [
+            "Timeline of all phases with dates (Base → Build → Peak → Taper → Race → Recovery)",
+            "Weekly mileage progression chart (line chart overlaid on timeline)",
+            "Key milestones: longest run, peak week, taper start, race day",
+            "Holidays and vacations marked",
+            "Current position indicator ('You are here')",
+            "Projected race time (if enough data)"
+        ],
+        "interactions": [
+            "Tap any week to jump to weekly view",
+            "Scroll horizontally through the full plan",
+            "Toggle between mileage chart and intensity chart"
+        ]
+    }
+}
+```
+
+### 9B.2 Color Coding System
+
+```python
+WORKOUT_COLOR_CODING = {
+    "description": (
+        "Consistent color coding across all calendar views so runners "
+        "can instantly identify workout types at a glance."
+    ),
+
+    "categories": {
+        "easy_aerobic": {
+            "color": "green",
+            "workouts": ["easy_run", "recovery_run", "long_run"],
+            "meaning": "Low intensity — the foundation of your training"
+        },
+        "quality_hard": {
+            "color": "orange",
+            "workouts": ["tempo_run", "interval_800m", "interval_1600m",
+                         "hill_repeats", "fartlek", "ladder_intervals",
+                         "pyramid_intervals", "sprints"],
+            "meaning": "Hard effort — these build speed and strength"
+        },
+        "cross_training": {
+            "color": "blue",
+            "workouts": ["cycling", "swimming", "elliptical", "rowing",
+                         "aqua_jogging", "strength_training"],
+            "meaning": "Non-running fitness — complementary training"
+        },
+        "recovery_flexibility": {
+            "color": "purple",
+            "workouts": ["yoga", "pilates", "walking", "stretching"],
+            "meaning": "Active recovery — restoring your body"
+        },
+        "rest": {
+            "color": "gray",
+            "workouts": ["rest_day"],
+            "meaning": "Full rest — your body adapts on rest days"
+        },
+        "race": {
+            "color": "gold",
+            "workouts": ["race_day", "tune_up_race"],
+            "meaning": "Race day — everything has led to this"
+        }
+    },
+
+    "status_indicators": {
+        "completed": "Filled color dot or checkmark",
+        "upcoming": "Outlined dot (empty)",
+        "skipped": "X mark or strikethrough",
+        "rescheduled": "Arrow icon indicating moved",
+        "in_progress": "Pulsing dot animation",
+        "modified_by_injury": "Color dot with small caution indicator"
+    },
+
+    "special_overlays": {
+        "holiday": "Small flag icon on the date",
+        "vacation": "Shaded background spanning date range",
+        "deload_week": "Subtle lighter background for the entire week",
+        "peak_week": "Subtle border highlight — 'this is your biggest week'",
+        "taper_lock": "Lock icon on taper/recovery weeks (Section 3)",
+        "injury_active": "Small caution badge on affected days",
+        "weather_alert": "Cloud/sun icon when pace is weather-adjusted"
+    }
+}
+```
+
+### 9B.3 Calendar Interactions & Smart Features
+
+```python
+CALENDAR_SMART_FEATURES = {
+    "drag_and_drop_swap": {
+        "description": (
+            "In weekly view, user can long-press a workout and drag it "
+            "to another day. The app applies swap rules (Section 6.5) "
+            "in real-time: valid drop targets highlight green, invalid "
+            "ones highlight red with a brief explanation of why."
+        ),
+        "validation": "Hard/easy spacing rules enforced visually",
+        "undo": "Swaps can be undone within 10 seconds"
+    },
+
+    "today_widget": {
+        "description": (
+            "A persistent 'today' card that shows at the top of the app. "
+            "At a glance: what's today's workout, how long, and when."
+        ),
+        "contents": [
+            "Workout type and summary (e.g., 'Easy Run — 5 km, ~30 min')",
+            "Time of day from schedule",
+            "Weather snapshot if outdoor run",
+            "Quick start button",
+            "Quick skip button"
+        ]
+    },
+
+    "upcoming_week_preview": {
+        "description": (
+            "At the end of each week, show a preview of next week's plan. "
+            "Let the user review and adjust before the week starts."
+        ),
+        "timing": "Shown on the last day of the current week/cycle",
+        "actions": [
+            "Approve the week as-is",
+            "Swap workouts between days",
+            "Flag a reduced availability day",
+            "Add a holiday or blocked date"
+        ]
+    },
+
+    "phase_transition_banners": {
+        "description": (
+            "When the plan transitions between phases (e.g., Base → Build), "
+            "show a banner in the calendar explaining what's changing and why."
+        ),
+        "example_messages": {
+            "base_to_build": (
+                "Starting your Build phase this week. You'll notice more "
+                "quality sessions — your body is ready for them after building "
+                "that aerobic base."
+            ),
+            "build_to_peak": (
+                "Peak phase begins. These are your hardest weeks — but also "
+                "the ones that make race day feel achievable."
+            ),
+            "peak_to_taper": (
+                "Taper time! Volume drops but fitness doesn't. You might "
+                "feel antsy — that's normal. Trust the science."
+            ),
+            "taper_to_race": (
+                "Race week. You've done the work. Focus on rest, hydration, "
+                "and logistics. The hay is in the barn."
+            )
+        }
+    },
+
+    "life_events_on_calendar": {
+        "description": (
+            "The calendar should show non-training events alongside workouts "
+            "so the runner sees their training in the context of their life."
+        ),
+        "event_types": [
+            "Holidays (auto-detected + user-added)",
+            "Vacations (user-entered date ranges)",
+            "Reduced availability weeks",
+            "Night shifts (for shift workers)",
+            "Tune-up races",
+            "Goal race",
+            "Injury active period (start → resolved)",
+            "Recovery phase post-race"
+        ],
+        "import_support": (
+            "Optional: import events from Google Calendar / Apple Calendar / "
+            "Outlook to auto-identify potential scheduling conflicts."
+        )
+    },
+
+    "plan_adjustment_history": {
+        "description": (
+            "Visual timeline of every adjustment the plan has made — so the "
+            "user can see how the plan adapted around their life."
+        ),
+        "logged_events": [
+            "Workout rescheduled due to holiday",
+            "Volume reduced for vacation",
+            "Intensity reduced for injury",
+            "Plan extended / compressed",
+            "Schedule changed mid-plan",
+            "Deload week inserted",
+            "Workout swapped by user"
+        ],
+        "display": "Subtle annotation dots on the monthly view, expandable on tap"
+    }
+}
+```
+
+### 9B.4 Calendar Data Model
+
+```typescript
+interface CalendarDay {
+  date: Date;
+  day_of_week: string;
+  cycle_day_number: number;           // 1-N for non-standard cycles
+  week_number: number;                // plan week (or cycle number)
+  training_phase: TrainingPhase;
+
+  // Workout
+  workout: ScheduledWorkout | null;
+  workout_status: "upcoming" | "completed" | "skipped" | "rescheduled" | "rest";
+  workout_color: string;              // from color coding system
+
+  // Life events
+  is_holiday: boolean;
+  holiday_name: string | null;
+  is_vacation: boolean;
+  is_reduced_availability: boolean;
+  is_night_shift: boolean;
+  is_race_day: boolean;
+  is_tune_up_race: boolean;
+
+  // Injury
+  injury_active: boolean;
+  injury_modification_applied: boolean;
+
+  // Weather (populated day-of)
+  weather_forecast: WeatherForecast | null;
+  pace_adjusted_for_weather: boolean;
+
+  // User modifications
+  user_swapped: boolean;
+  swapped_from: Date | null;
+  user_notes: string | null;
+}
+
+interface CalendarWeek {
+  week_number: number;
+  cycle_length: number;               // 7 for standard, N for non-standard
+  start_date: Date;
+  end_date: Date;
+  training_phase: TrainingPhase;
+  is_deload: boolean;
+  is_peak: boolean;
+  is_taper: boolean;
+  is_race_week: boolean;
+
+  // Aggregates
+  planned_mileage_km: number;
+  completed_mileage_km: number;
+  planned_runs: number;
+  completed_runs: number;
+  intensity_distribution: IntensityDistribution;
+  weekly_note: string | null;
+
+  days: CalendarDay[];
+}
+
+interface CalendarMonth {
+  year: number;
+  month: number;
+  weeks: CalendarWeek[];              // weeks that overlap this month
+
+  // Aggregates
+  total_planned_mileage_km: number;
+  total_completed_mileage_km: number;
+  completion_rate: number;
+  longest_run_km: number;
+  phases_this_month: TrainingPhase[];
+  holidays: Holiday[];
+  vacations: VacationBlock[];
+}
+
+interface PlanTimeline {
+  plan_id: string;
+  start_date: Date;
+  race_date: Date;
+  end_date: Date;                     // includes recovery phase
+  total_weeks: number;
+  current_week: number;
+  phases: {
+    phase: TrainingPhase;
+    start_week: number;
+    end_week: number;
+    start_date: Date;
+    end_date: Date;
+  }[];
+  milestones: {
+    type: string;
+    week: number;
+    date: Date;
+    label: string;
+  }[];
+  adjustment_history: CalendarAdjustment[];
+}
+
+interface CalendarAdjustment {
+  id: string;
+  date: Date;
+  type: "reschedule" | "volume_change" | "injury_modification"
+      | "vacation_adjustment" | "schedule_change" | "deload_insert"
+      | "user_swap";
+  description: string;
+  before_snapshot: any;               // what the plan looked like before
+  after_snapshot: any;                // what it looks like after
+}
+```
+
+### 9B.5 External Calendar Sync
+
+```python
+EXTERNAL_CALENDAR_SYNC = {
+    "description": (
+        "Runners live in Google Calendar, Apple Calendar, or Outlook. "
+        "The training plan must exist where they already look at their "
+        "schedule — not trapped in a separate app. This is critical for "
+        "the core promise: training that fits around your life."
+    ),
+
+    "export_modes": {
+        "subscription_feed": {
+            "description": (
+                "A live .ics subscription URL that external calendars poll "
+                "periodically. Workouts appear in the user's main calendar "
+                "and auto-update when the plan changes (reschedules, injury "
+                "modifications, vacation adjustments)."
+            ),
+            "url_format": "webcal://api.app.com/plans/{plan_id}/calendar.ics?token={auth_token}",
+            "update_frequency": (
+                "Calendar apps poll the .ics feed on their own schedule "
+                "(usually every 1-24 hours). Changes made in-app propagate "
+                "on the next poll. We include a Cache-Control header "
+                "suggesting a 1-hour refresh."
+            ),
+            "supported_calendars": [
+                "Google Calendar (Add by URL → paste webcal link)",
+                "Apple Calendar (Settings → Accounts → Add Subscribed Calendar)",
+                "Outlook (Add calendar → From internet)",
+                "Any app supporting iCalendar (.ics) subscription"
+            ]
+        },
+        "one_time_download": {
+            "description": (
+                "Download a .ics file of the entire plan for manual import. "
+                "Static snapshot — does not update when the plan changes. "
+                "Useful for runners who want a backup or use a calendar app "
+                "that doesn't support subscription feeds."
+            ),
+            "file": "{plan_name}_{distance}_{start_date}.ics"
+        }
+    },
+
+    "calendar_event_format": {
+        "description": (
+            "Each workout appears as a time-blocked event (NOT an all-day event). "
+            "This is essential — runners complained that TrainerRoad exports "
+            "workouts as all-day events, which are useless for time management."
+        ),
+        "event_fields": {
+            "summary": "Easy Run — 5 km (~30 min)",
+            "start_time": "Pulled from user's day schedule (Section 6.6)",
+            "end_time": "start_time + total_window_minutes (includes transition time)",
+            "location": "Optional: 'Treadmill' or 'Outdoor' based on surface preference",
+            "description": (
+                "Workout details:\n"
+                "- Warm-up: 5 min walk/easy jog\n"
+                "- Core: 5 km at easy pace (6:00-6:30/km)\n"
+                "- Cool-down: 5 min walk\n"
+                "- Total window: 55 min (includes 15 min shower/change)\n"
+                "\n"
+                "Training Phase: Build (Week 8 of 16)\n"
+                "Color: Green (easy/aerobic)"
+            ),
+            "categories": "Running, Training",
+            "status": "TENTATIVE for upcoming, CONFIRMED for today",
+            "alarm": "Reminder 30 min before (configurable)"
+        },
+        "special_events": {
+            "rest_day": "Optional: show as all-day event 'Rest Day — Recovery' or exclude entirely (user choice)",
+            "race_day": "All-day event with race name, location, and start time as a timed sub-event",
+            "holiday": "All-day event showing holiday name and any workout modifications",
+            "vacation": "All-day events spanning vacation dates with 'No training' or reduced plan"
+        }
+    },
+
+    "two_way_sync": {
+        "description": (
+            "If a user reschedules a workout in their external calendar "
+            "(e.g., drags 'Tempo Run' from Tuesday to Wednesday in Google "
+            "Calendar), the change syncs back to the app. This is Runna's "
+            "standout feature and a major differentiator."
+        ),
+        "implementation": {
+            "google_calendar": (
+                "Use Google Calendar API (CalDAV or REST) with push notifications "
+                "to detect when a synced event is moved. Map the event UID back "
+                "to the workout and trigger the swap rules (Section 6.5)."
+            ),
+            "apple_calendar": (
+                "Use EventKit framework on iOS to monitor changes to events "
+                "the app created. Detect date changes and trigger swaps."
+            ),
+            "outlook": (
+                "Use Microsoft Graph API with change notifications "
+                "to detect event modifications."
+            )
+        },
+        "conflict_handling": {
+            "valid_swap": (
+                "If the moved workout passes swap rules (Section 6.5), "
+                "accept the change silently and update the plan."
+            ),
+            "invalid_swap": (
+                "If the swap violates hard/easy spacing rules, send a "
+                "push notification: 'Moving your tempo run to Wednesday "
+                "puts two hard sessions back-to-back. Want to proceed or "
+                "revert?'"
+            ),
+            "cross_week_move": (
+                "Moving a workout to a different week triggers a plan "
+                "regeneration for both weeks. Notify user of any cascading "
+                "changes."
+            )
+        },
+        "user_setting": "Two-way sync is opt-in. Default is one-way (export only)."
+    },
+
+    "calendar_import_for_conflict_detection": {
+        "description": (
+            "Import the user's existing calendar (read-only) to detect "
+            "scheduling conflicts. If a user has a dentist appointment at "
+            "6 PM and their run is scheduled for 5:30 PM, flag it."
+        ),
+        "method": (
+            "User grants read-only access to their Google/Apple/Outlook "
+            "calendar. The app scans for time conflicts with planned workouts."
+        ),
+        "conflict_handling": [
+            "Highlight conflicting days in the calendar view with a warning icon",
+            "Suggest alternative time slots on the same day",
+            "Offer to move the workout to a different day if no time slots fit",
+            "Never auto-move workouts — always ask first"
+        ],
+        "privacy": (
+            "The app reads event times and titles only (for conflict labels). "
+            "Event details, attendees, and content are never stored. "
+            "User can revoke access at any time."
+        )
+    }
+}
+```
+
+### 9B.6 Home Screen & Lock Screen Widget
+
+```python
+HOME_SCREEN_WIDGET = {
+    "description": (
+        "A home screen widget that shows today's workout at a glance — "
+        "without opening the app. Runners check their phone constantly; "
+        "the widget keeps training visible and top-of-mind."
+    ),
+
+    "ios_widget": {
+        "sizes": {
+            "small": {
+                "displays": [
+                    "Workout type icon (color-coded)",
+                    "Distance or duration",
+                    "Scheduled time"
+                ]
+            },
+            "medium": {
+                "displays": [
+                    "Today's workout: type, distance, pace target",
+                    "Scheduled time with transition time",
+                    "Weather snapshot (temp + conditions icon)",
+                    "Tap to open daily view"
+                ]
+            },
+            "large": {
+                "displays": [
+                    "Today's workout (full detail)",
+                    "Tomorrow's workout preview",
+                    "Week progress bar (runs completed / total)",
+                    "Training phase label"
+                ]
+            }
+        },
+        "lock_screen_widget": {
+            "displays": [
+                "Workout type icon + distance",
+                "Time of day"
+            ],
+            "tappable": "Opens directly to today's workout"
+        },
+        "live_activity": {
+            "description": (
+                "During a run, show a Live Activity on the lock screen and "
+                "Dynamic Island with elapsed time, distance, and current pace."
+            )
+        }
+    },
+
+    "android_widget": {
+        "sizes": {
+            "small_2x1": "Workout type + distance + time",
+            "medium_3x2": "Full today card with weather and quick start",
+            "large_4x3": "Today + tomorrow + week progress"
+        },
+        "glance": {
+            "description": "Android Glance-based widget for Wear OS integration"
+        }
+    },
+
+    "rest_day_display": {
+        "rest": "Widget shows 'Rest Day' with a calming color and encouraging message",
+        "examples": [
+            "'Rest Day — Your muscles are adapting right now.'",
+            "'Rest Day — Back at it tomorrow with a 5 km easy run.'"
+        ]
+    },
+
+    "update_frequency": "Widget refreshes when the app detects a plan change, at midnight, and when weather data updates"
+}
+```
+
+### 9B.7 Print & PDF Export
+
+```python
+PRINT_AND_PDF_EXPORT = {
+    "description": (
+        "Many runners — especially those less tech-savvy, or those who "
+        "prefer a physical reference — print their plan and tape it to "
+        "the fridge, put it on a desk, or carry it in a running bag. "
+        "The app must produce a clean, printable version of the plan."
+    ),
+
+    "export_options": {
+        "full_plan_overview": {
+            "format": "Multi-page PDF",
+            "contents": [
+                "Cover page: race distance, target date, skill level, plan duration",
+                "Phase summary: dates and goals for each phase",
+                "Week-by-week grid: each week on one row, days as columns",
+                "Each cell shows: workout type, distance, target pace/effort",
+                "Color coding preserved (print-friendly palette)",
+                "Holidays, vacations, and deload weeks marked",
+                "Race day highlighted prominently",
+                "Space for handwritten notes beside each day"
+            ],
+            "layout": "Landscape orientation, one week per row, fits on letter/A4"
+        },
+        "single_week": {
+            "format": "Single-page PDF",
+            "contents": [
+                "Week number, dates, training phase",
+                "Each day with full workout detail",
+                "Pace targets and effort levels",
+                "Weekly mileage total",
+                "Notes from the plan generator"
+            ],
+            "use_case": "Print the current week and pin it up"
+        },
+        "monthly_view": {
+            "format": "Single-page PDF",
+            "contents": [
+                "Calendar grid for the month",
+                "Workout type and distance in each day cell",
+                "Phase bands and race day markers",
+                "Monthly mileage summary"
+            ],
+            "layout": "Portrait orientation, standard month calendar grid"
+        }
+    },
+
+    "print_friendly_design": {
+        "colors": "Use print-safe colors (no neon, high contrast for B&W printers)",
+        "fonts": "Clean sans-serif, minimum 10pt for readability",
+        "margins": "Standard print margins (1 inch / 2.5 cm)",
+        "no_app_chrome": "Remove all navigation, buttons, interactive elements",
+        "logo": "Small app logo in footer only"
+    },
+
+    "sharing_via_pdf": (
+        "The PDF export doubles as a sharing mechanism — users can email "
+        "or text the PDF to a running buddy, coach, or partner so they "
+        "can see the plan without needing an app account."
+    )
+}
+```
+
+### 9B.8 Cross-Training & Strength on the Calendar
+
+```python
+CROSS_TRAINING_CALENDAR = {
+    "description": (
+        "Cross-training (cycling, swimming, gym) and strength training "
+        "don't count toward running volume but still need to live on the "
+        "calendar so runners see their complete week. Many runners also "
+        "struggle with when to schedule strength relative to hard run days."
+    ),
+
+    "adding_cross_training": {
+        "methods": [
+            "Tap a day → 'Add activity' → select from cross-training types",
+            "Recurring schedule: 'I do yoga every Wednesday' → auto-populate",
+            "Quick-add from a library of common activities"
+        ],
+        "activity_types": [
+            "Strength training (gym)",
+            "Cycling",
+            "Swimming",
+            "Yoga / Pilates",
+            "Walking",
+            "Elliptical / rowing",
+            "Other (user-defined label)"
+        ]
+    },
+
+    "display_on_calendar": {
+        "appearance": (
+            "Cross-training activities appear as secondary cards below the "
+            "primary running workout for that day. They use the blue "
+            "(cross-training) or purple (recovery/flexibility) color from "
+            "the color coding system (Section 9B.2)."
+        ),
+        "multiple_per_day": (
+            "A day can have one running workout + one or more cross-training "
+            "activities. Example: Morning easy run + evening strength session."
+        ),
+        "rest_day_activities": (
+            "On rest days, cross-training like yoga or walking can appear "
+            "without violating the rest day. These are clearly labeled as "
+            "'active recovery' not 'workouts'."
+        )
+    },
+
+    "smart_placement_suggestions": {
+        "description": (
+            "The app suggests optimal days for strength training based on "
+            "the running plan. Research shows strength should ideally follow "
+            "hard run days (not precede them) and avoid the day before long runs."
+        ),
+        "rules": [
+            "Suggest strength on hard run days (after the run) or easy run days",
+            "Avoid strength the day before a long run or race-pace workout",
+            "Avoid strength on rest days (true rest)",
+            "If user does strength 2x/week, space them 3+ days apart",
+            "Lower-body strength: same day as hard run (combined stress + recovery)",
+            "Upper-body/core: flexible placement"
+        ],
+        "user_override": "Suggestions only — user can place activities wherever they want"
+    },
+
+    "time_budgeting": (
+        "Cross-training activities respect the same transition time budget "
+        "system (Section 6.6.1a) — if the user budgets 60 minutes for a "
+        "lunch workout with 15 min shower, and they choose to swim instead "
+        "of run, the time budget still applies."
+    ),
+
+    "plan_impact": (
+        "Cross-training does NOT affect running plan calculations. "
+        "It does not count toward weekly mileage, ACWR, or intensity "
+        "distribution. It appears on the calendar purely for the user's "
+        "scheduling visibility. This is a deliberate design decision — "
+        "the app is a running plan tool, not a general fitness planner."
+    )
+}
+```
+
+### 9B.9 Calendar Sharing
+
+```python
+CALENDAR_SHARING = {
+    "description": (
+        "Beyond the public profile (Section 11D), users may want to share "
+        "specific views of their calendar with a coach, partner, running "
+        "buddy, or accountability partner without giving full profile access."
+    ),
+
+    "share_options": {
+        "share_current_week": {
+            "method": "Generate a shareable link or image of the current week view",
+            "includes": [
+                "Workout types and distances for each day",
+                "Completion status (done/upcoming/skipped)",
+                "Training phase and week number",
+                "Weekly mileage progress"
+            ],
+            "excludes": [
+                "Pace targets (optional — user can toggle on)",
+                "Injury details",
+                "Personal notes"
+            ],
+            "format": "Web link (no login needed) or downloadable image"
+        },
+        "share_plan_overview": {
+            "method": "Shareable link to a read-only plan timeline",
+            "includes": [
+                "Full plan phases and dates",
+                "Weekly mileage chart",
+                "Race day and key milestones",
+                "Overall completion percentage"
+            ],
+            "format": "Web link with a clean read-only view"
+        },
+        "share_to_coach": {
+            "method": (
+                "Generate a read-only link that a coach can bookmark. "
+                "Updates in real-time as the runner completes workouts."
+            ),
+            "includes": "Full calendar with completion data and feedback",
+            "expiry": "Link expires after 30 days unless refreshed"
+        }
+    },
+
+    "social_sharing": {
+        "description": (
+            "Share a week's accomplishments to social media — a clean "
+            "graphic showing the week's completed workouts, total mileage, "
+            "and training phase."
+        ),
+        "platforms": ["Instagram Stories", "Twitter/X", "Facebook", "iMessage/WhatsApp"],
+        "format": "Auto-generated image card with app branding",
+        "privacy": "Only shows what the user opts into — no pace or injury data by default"
+    }
+}
+```
+
+### 9B.10 Calendar API Endpoints
+
+```
+GET    /api/plans/:id/calendar/day/:date         — Get single day detail
+GET    /api/plans/:id/calendar/week/:week_num     — Get week view
+GET    /api/plans/:id/calendar/month/:year/:month — Get month view
+GET    /api/plans/:id/calendar/timeline           — Get full plan timeline
+GET    /api/plans/:id/calendar/today              — Get today's card
+GET    /api/plans/:id/calendar/upcoming           — Get next 7 days preview
+POST   /api/plans/:id/calendar/swap               — Swap two workouts (drag-and-drop)
+POST   /api/plans/:id/calendar/event              — Add a life event (holiday, vacation, etc.)
+DELETE /api/plans/:id/calendar/event/:eid         — Remove a life event
+GET    /api/plans/:id/calendar/adjustments        — Get adjustment history
+
+# External calendar sync
+GET    /api/plans/:id/calendar/export/ical        — Get .ics subscription feed URL
+GET    /api/plans/:id/calendar/export/ical/download — Download static .ics file
+POST   /api/plans/:id/calendar/sync/connect       — Connect external calendar for two-way sync
+DELETE /api/plans/:id/calendar/sync/disconnect     — Disconnect external calendar sync
+GET    /api/plans/:id/calendar/sync/status         — Check sync status and last sync time
+POST   /api/plans/:id/calendar/import              — Import external calendar events (conflict detection)
+GET    /api/plans/:id/calendar/conflicts           — Get detected scheduling conflicts
+
+# Cross-training
+POST   /api/plans/:id/calendar/cross-training      — Add a cross-training activity
+PUT    /api/plans/:id/calendar/cross-training/:aid  — Update a cross-training activity
+DELETE /api/plans/:id/calendar/cross-training/:aid  — Remove a cross-training activity
+GET    /api/plans/:id/calendar/cross-training/suggest — Get smart placement suggestions
+
+# Print & export
+GET    /api/plans/:id/calendar/export/pdf           — Generate printable PDF (params: scope=full|week|month)
+GET    /api/plans/:id/calendar/export/pdf/week/:num — Generate single-week PDF
+
+# Sharing
+POST   /api/plans/:id/calendar/share               — Generate a shareable link (params: scope, privacy)
+DELETE /api/plans/:id/calendar/share/:link_id       — Revoke a shareable link
+GET    /api/plans/:id/calendar/share/image/:scope   — Generate a social sharing image
 ```
 
 ---
@@ -6513,6 +7980,743 @@ IF user reports pain or injury:
     - Week 2 back: 85% volume, resume quality sessions
     - Week 3: Full plan resumption
   → If >2 weeks off, apply Section 6.3 Scenario 3+
+```
+
+### 12.3 Weather-Adjusted Pace Targets
+
+Section 1.1 establishes that heat/humidity adjustments exist in v1.
+This subsection defines the algorithm. Research shows performance degrades
+significantly above 15°C and especially above 60% humidity.
+
+```python
+def adjust_pace_for_weather(target_pace_sec_per_km, temperature_c, humidity_pct, user_location):
+    """
+    Adjust prescribed workout paces based on current weather conditions.
+    Uses a weather API call keyed to user location at workout start time.
+
+    Research basis:
+    - ~1-2 sec/km slower per 1°C above 15°C (Ely et al., 2007)
+    - Heat + humidity compound: heat index is more relevant than temp alone
+    - Below 15°C: no adjustment (cold has minimal performance impact for
+      distances up to marathon, aside from comfort)
+    - Wind chill considered for perceived effort but NOT pace adjustment
+
+    CRITICAL: Weather adjustments are NEVER used to penalize or "grade"
+    a completed workout. They are ONLY used to adjust TARGETS before
+    the workout starts and to contextualize results after.
+    """
+
+    if temperature_c <= 15:
+        adjustment_sec = 0
+    elif temperature_c <= 25:
+        # Moderate heat: ~1.5 sec/km per degree above 15
+        base_adjustment = (temperature_c - 15) * 1.5
+        # Humidity multiplier: above 60%, compound effect
+        humidity_factor = 1.0 + max(0, (humidity_pct - 60) / 100)
+        adjustment_sec = base_adjustment * humidity_factor
+    elif temperature_c <= 35:
+        # High heat: ~2.5 sec/km per degree above 25, plus humidity
+        base_adjustment = (10 * 1.5) + ((temperature_c - 25) * 2.5)
+        humidity_factor = 1.0 + max(0, (humidity_pct - 50) / 80)
+        adjustment_sec = base_adjustment * humidity_factor
+    else:
+        # Extreme heat: recommend indoor/treadmill or skip
+        return {
+            "adjusted_pace": None,
+            "warning": (
+                f"It's {temperature_c}°C with {humidity_pct}% humidity. "
+                "We recommend running indoors or rescheduling. "
+                "Heat illness risk is very high."
+            ),
+            "suggest_treadmill": True,
+            "suggest_reschedule": True
+        }
+
+    adjusted = round(target_pace_sec_per_km + adjustment_sec)
+
+    return {
+        "original_pace_sec_per_km": target_pace_sec_per_km,
+        "adjusted_pace_sec_per_km": adjusted,
+        "adjustment_sec": round(adjustment_sec),
+        "conditions": {
+            "temperature_c": temperature_c,
+            "humidity_pct": humidity_pct
+        },
+        "display_note": (
+            f"Pace adjusted +{round(adjustment_sec)}s/km for "
+            f"{temperature_c}°C and {humidity_pct}% humidity. "
+            f"Same effort, slower pace — that's normal."
+        )
+    }
+```
+
+### 12.4 Workout Completion Grading (Positive-Only)
+
+A major complaint about existing apps (Runna, Nike Run Club, Garmin) is
+that they "grade" or "score" workouts in a way that makes runners feel
+like failures when they run slower or shorter than prescribed. This app
+takes a fundamentally different approach.
+
+```python
+WORKOUT_GRADING_PHILOSOPHY = {
+    "core_principle": (
+        "The app NEVER tells a user they failed a workout. Every completed "
+        "workout is a positive. The grading system exists to inform the "
+        "plan generator, NOT to judge the runner."
+    ),
+
+    "grading_rules": {
+        "completed_as_planned": {
+            "internal_score": 1.0,
+            "user_message": "Nailed it! Right on target.",
+            "emoji": None  # no emojis per app rules
+        },
+        "completed_slower_than_planned": {
+            "internal_score": 0.85,
+            "user_message": (
+                "Run complete! Pace was a bit off target — that happens. "
+                "Weather, sleep, stress, and dozens of other factors affect pace. "
+                "What matters is you got out there."
+            ),
+            "check_weather": True,  # if weather was a factor, say so
+            "weather_message": (
+                "Pace was slower than target, but it was {temp}°C today. "
+                "Your effort was likely right on track."
+            )
+        },
+        "completed_shorter_than_planned": {
+            "internal_score": 0.70,
+            "user_message": (
+                "You ran {actual_km} of {planned_km} km today. That still counts! "
+                "Any run is better than no run."
+            ),
+            "plan_effect": "No automatic adjustment. Note for weekly review."
+        },
+        "completed_harder_than_planned": {
+            "internal_score": 0.90,
+            "user_message": (
+                "You went harder than planned today. That enthusiasm is great, "
+                "but make sure tomorrow is easy to balance the load."
+            ),
+            "plan_effect": "Flag for gray zone check (Section 5C). May suggest extra recovery."
+        },
+        "skipped": {
+            "internal_score": 0.0,
+            "user_message": None,  # don't rub it in
+            "plan_effect": "Apply missed day algorithm (Section 6.3)"
+        }
+    },
+
+    "what_we_never_do": [
+        "Never show a letter grade (A, B, C, D, F)",
+        "Never show a percentage score to the user (e.g., '72% completion')",
+        "Never compare the user to other runners",
+        "Never use red/failure colors for slower-than-planned runs",
+        "Never penalize weather-affected runs in any visible metric",
+        "Never say 'you should have...' or 'you failed to...'",
+        "Never auto-decrease plan difficulty based on one bad workout"
+    ],
+
+    "internal_use_only": (
+        "The plan generator uses completion data to adjust future weeks. "
+        "If a user consistently runs 15%+ slower than prescribed paces, "
+        "the plan generator silently adjusts future pace targets downward. "
+        "If they consistently exceed targets, it adjusts upward. "
+        "This happens automatically with no negative messaging."
+    )
+}
+```
+
+### 12.5 Pre-Plan Base Building for Absolute Beginners
+
+The C25K program has a 72.7% dropout rate, largely because progression is
+too aggressive. Week 5 is the critical failure point, jumping from 5-min
+runs to a 20-min sustained run. The app should offer a gentler "pre-plan"
+phase for runners who aren't ready for the main training plan.
+
+([None to Run — C25K Alternative](https://www.nonetorun.com/blog/couch-to-5k-running-plan-alternative),
+[Mel Magazine — C25K Reddit Discussion](https://melmagazine.com/en-us/story/couch-to-5k-c25k-reddit-training-plan-best-app))
+
+```python
+PRE_PLAN_BASE_BUILDING = {
+    "description": (
+        "For runners who cannot yet meet the minimum prerequisites for "
+        "a beginner plan (Section 5G.2). This phase brings them from "
+        "'I can walk 20 minutes' to 'I can run 15-20 minutes continuously.' "
+        "It's a bridge TO the training plan, not part of it."
+    ),
+
+    "entry_criteria": {
+        "5K": "Cannot yet run 1 mile (1.6 km) continuously",
+        "10K": "Cannot yet run 2 miles (3.2 km) continuously",
+        "half_marathon": "Cannot yet run 3 miles (4.8 km) continuously",
+        "marathon": "Has not completed any race distance"
+    },
+
+    "phase_structure": {
+        "duration_weeks": "4-8 (auto-adjusts based on progress)",
+        "sessions_per_week": 3,
+        "session_duration_minutes": "20-30",
+        "method": "run/walk intervals with gradual progression",
+
+        "progression": {
+            "weeks_1_2": {
+                "pattern": "Walk 3 min → Run 30 sec → repeat",
+                "total_run_time": "5 min",
+                "total_session": "20 min",
+                "notes": "If 30 sec of running feels hard, that's OK. We start here."
+            },
+            "weeks_3_4": {
+                "pattern": "Walk 2 min → Run 1 min → repeat",
+                "total_run_time": "10 min",
+                "total_session": "25 min",
+                "notes": "You're doubling your run time. That's a big deal."
+            },
+            "weeks_5_6": {
+                "pattern": "Walk 1.5 min → Run 2 min → repeat",
+                "total_run_time": "14 min",
+                "total_session": "25 min",
+                "notes": "Running more than walking now."
+            },
+            "weeks_7_8": {
+                "pattern": "Walk 1 min → Run 3 min → repeat",
+                "total_run_time": "18 min",
+                "total_session": "28 min",
+                "notes": "Almost ready for your training plan!"
+            }
+        },
+
+        "the_week_5_problem": {
+            "description": (
+                "C25K infamously jumps from 5-min runs to 20-min runs in Week 5. "
+                "This app NEVER makes that jump. Progression between any two weeks "
+                "is capped at 50% increase in continuous run duration. "
+                "If 2 min → 3 min is a 50% jump, that's the maximum."
+            ),
+            "max_run_duration_increase_pct": 50,
+            "max_run_duration_increase_minutes": 2  # absolute cap
+        }
+    },
+
+    "graduation_to_main_plan": {
+        "criteria": "Can run 15-20 minutes continuously without stopping",
+        "test_workout": {
+            "description": "Run at easy pace for 15 minutes. If completed, graduate.",
+            "pass": "Start beginner training plan for chosen distance",
+            "fail": "Continue pre-plan phase for 1-2 more weeks"
+        },
+        "celebration_message": (
+            "You just ran 15 minutes straight! You're ready for your "
+            "{race_distance} training plan. Let's go!"
+        )
+    },
+
+    "dropout_prevention": [
+        "Every session starts with a warm-up walk — never cold-start running",
+        "Run intervals are at CONVERSATIONAL pace — if you can't talk, slow down",
+        "Walking is part of the plan, not a failure",
+        "Repeat any week that felt too hard — there's no penalty for that",
+        "Show progress chart: total run minutes per week trending upward"
+    ]
+}
+```
+
+### 12.6 In-Run Notifications & Audio Cues
+
+Runners want real-time guidance during workouts — not just a plan on paper.
+The app should support push notifications and audio cues during active sessions.
+
+```python
+IN_RUN_NOTIFICATIONS = {
+    "description": (
+        "During an active workout, the app provides timely notifications "
+        "via audio cues, vibration (watch), or push notification (phone). "
+        "User configures which channels they want."
+    ),
+
+    "notification_types": {
+        "interval_alerts": {
+            "trigger": "Start/end of each interval, recovery period",
+            "content": "3-2-1 beep for interval start; double beep for recovery",
+            "applicable_workouts": ["interval_800m", "interval_1600m", "fartlek",
+                                    "hill_repeats", "ladder_intervals", "pyramid_intervals"],
+            "user_configurable": True
+        },
+
+        "pace_alerts": {
+            "trigger": "Current pace deviates >10% from target for 30+ seconds",
+            "content": {
+                "too_fast": "You're running faster than planned. Ease back to save energy.",
+                "too_slow": "Pace is a bit off — that's OK. Stay comfortable."
+            },
+            "applicable_workouts": ["tempo_run", "easy_run", "long_run"],
+            "frequency_cap": "Max once per km",  # don't nag
+            "user_configurable": True,
+            "can_disable": True  # some runners find pace alerts stressful
+        },
+
+        "distance_milestones": {
+            "trigger": "Every 1 km (or 1 mile in imperial)",
+            "content": "{distance} done. Pace: {current_pace}. Keep it up.",
+            "user_configurable": True,
+            "custom_intervals": True  # user can set every 0.5 km, 2 km, etc.
+        },
+
+        "halfway_turnaround": {
+            "trigger": "50% of planned distance or duration reached",
+            "content": "Halfway point! Time to turn around if doing an out-and-back.",
+            "applicable_workouts": ["easy_run", "long_run", "tempo_run"],
+            "user_configurable": True
+        },
+
+        "hydration_reminders": {
+            "trigger": "Every 20-30 minutes during runs > 45 min",
+            "content": "Hydration check — take a sip if you have water.",
+            "applicable_workouts": ["long_run"],
+            "user_configurable": True
+        },
+
+        "run_walk_interval_alerts": {
+            "trigger": "Start/end of run and walk phases",
+            "content": "Run! / Walk.",
+            "applicable_workouts": ["run_walk sessions"],
+            "audio_distinction": "Different tones for run vs walk",
+            "user_configurable": True
+        },
+
+        "warm_up_complete": {
+            "trigger": "Warm-up duration elapsed",
+            "content": "Warm-up done. Time for the main workout.",
+            "applicable_workouts": ["tempo_run", "interval sessions"]
+        },
+
+        "cool_down_start": {
+            "trigger": "Main workout complete",
+            "content": "Great work! Easy jog cool-down for {cool_down_minutes} minutes.",
+            "applicable_workouts": ["all with warm-up/cool-down"]
+        },
+
+        "pain_check_mid_run": {
+            "trigger": "Midpoint of run when injury is active",
+            "content": "Quick check: How's your {body_part}? (tap to rate 0-10)",
+            "applicable_when": "active_injury",
+            "links_to": "Section 11.7 run/stop decision tree"
+        }
+    },
+
+    "user_preferences": {
+        "audio_enabled": True,
+        "vibration_enabled": True,
+        "voice_coaching": False,        # v2 feature: spoken cues like "Great pace!"
+        "notification_volume": "medium",
+        "do_not_disturb_mode": True,    # suppress non-run notifications during workout
+        "music_integration": (
+            "Audio cues play over music without pausing it. "
+            "Compatible with Spotify, Apple Music, etc."
+        )
+    }
+}
+```
+
+### 12.7 Week Start Day Configuration
+
+Different runners think of their training week differently. The app should
+let users choose which day their week starts — this affects weekly mileage
+display, streak tracking, and deload scheduling.
+
+```python
+WEEK_START_CONFIG = {
+    "options": [
+        "monday", "tuesday", "wednesday", "thursday",
+        "friday", "saturday", "sunday"
+    ],
+    "default": "monday",
+
+    "effects": [
+        "Weekly mileage totals start/end on the chosen day",
+        "Weekly streak tracking uses this boundary",
+        "Deload weeks align to this cycle",
+        "The 'week view' in the calendar starts on this day",
+        "Weekly summary notifications send at end of this week boundary"
+    ],
+
+    "why_it_matters": (
+        "A runner whose long run is Sunday might prefer Monday-Sunday weeks "
+        "so their long run caps the week. A nurse who works Sat-Mon might "
+        "prefer Tuesday as their week start. A runner whose long run is "
+        "Saturday might prefer Saturday-Friday. This affects how they "
+        "perceive their weekly mileage and progress."
+    ),
+
+    "data_model_addition": {
+        "user_profile_field": "week_start_day",
+        "type": "string",  # any day of the week
+        "default": "monday"
+    }
+}
+```
+
+### 12.7a Non-Standard Week Lengths (Shift Workers, Healthcare, etc.)
+
+Not everyone works Monday-Friday. Healthcare workers, firefighters, pilots,
+retail staff, and many other professionals have rotating, staggered, or
+compressed schedules. The app must support training cycles of ANY length,
+not just 7-day weeks. This builds on Section 5D.5 (non-standard cycles
+for 60+ runners) but applies it universally.
+
+```python
+NON_STANDARD_WEEK_CONFIG = {
+    "description": (
+        "For runners whose schedules don't fit a traditional 7-day week. "
+        "A nurse on a 3-on-4-off / 4-on-3-off rotating schedule, a "
+        "firefighter on 48-on-96-off, or a retail worker with inconsistent "
+        "days off needs a plan built around THEIR cycle, not a calendar week."
+    ),
+
+    "supported_cycle_lengths": {
+        "minimum_days": 5,
+        "maximum_days": 14,
+        "default": 7,
+        "common_examples": [
+            {"days": 5, "label": "5-day cycle", "use_case": "Compressed work week (4x10 schedule)"},
+            {"days": 6, "label": "6-day cycle", "use_case": "6-on-1-off shift pattern"},
+            {"days": 7, "label": "Standard week", "use_case": "Traditional Mon-Sun schedule"},
+            {"days": 8, "label": "8-day cycle", "use_case": "Rotating shift (2 days, 2 nights, 4 off)"},
+            {"days": 9, "label": "9-day cycle", "use_case": "3-on-3-off pattern"},
+            {"days": 10, "label": "10-day cycle", "use_case": "Extended rotation (firefighters, EMS)"},
+            {"days": 14, "label": "2-week cycle", "use_case": "Biweekly rotation schedules"}
+        ]
+    },
+
+    "setup_options": {
+        "option_a_fixed_cycle": {
+            "label": "My schedule repeats every N days",
+            "input": "User enters cycle length and marks available/unavailable days",
+            "example": {
+                "cycle_length": 8,
+                "pattern": [
+                    {"day": 1, "available": False, "note": "12-hour shift"},
+                    {"day": 2, "available": False, "note": "12-hour shift"},
+                    {"day": 3, "available": True,  "max_minutes": 45},
+                    {"day": 4, "available": True,  "max_minutes": 90},
+                    {"day": 5, "available": False, "note": "12-hour shift"},
+                    {"day": 6, "available": False, "note": "12-hour shift"},
+                    {"day": 7, "available": True,  "max_minutes": 120},
+                    {"day": 8, "available": True,  "max_minutes": 60}
+                ]
+            }
+        },
+
+        "option_b_irregular_schedule": {
+            "label": "My schedule changes week to week",
+            "input": (
+                "User enters their actual schedule 2-4 weeks at a time. "
+                "The plan generator builds workouts around the specific "
+                "days they mark as available."
+            ),
+            "how_it_works": (
+                "Instead of repeating a fixed pattern, the user opens the "
+                "calendar every 2-4 weeks and marks which days they're "
+                "available and for how long. The plan generator fills in "
+                "workouts around their availability."
+            ),
+            "reminder": "App reminds user to update their schedule every 2 weeks"
+        },
+
+        "option_c_roster_import": {
+            "label": "Import my work roster (v2)",
+            "description": (
+                "Future feature: import a shift roster (iCal, PDF, or manual entry) "
+                "and the app automatically identifies available training days."
+            ),
+            "status": "deferred_to_v2"
+        }
+    },
+
+    "plan_generation_for_non_standard_cycles": {
+        "description": (
+            "The plan generator adapts all its logic to work with non-7-day cycles."
+        ),
+        "adaptations": [
+            {
+                "feature": "Weekly mileage targets",
+                "adaptation": (
+                    "Recalculated as: cycle_mileage = weekly_target * (cycle_days / 7). "
+                    "A 10-day cycle with a 40 km/week target becomes 57 km per cycle."
+                )
+            },
+            {
+                "feature": "Deload frequency",
+                "adaptation": (
+                    "Expressed in cycles, not weeks. 'Deload every 3rd cycle' means "
+                    "every 3rd cycle regardless of cycle length."
+                )
+            },
+            {
+                "feature": "Hard session spacing",
+                "adaptation": (
+                    "Still requires N easy/rest days between hard sessions, but "
+                    "the algorithm schedules within the cycle, not within a week."
+                )
+            },
+            {
+                "feature": "Long run placement",
+                "adaptation": (
+                    "Placed on the day with the most available time in each cycle, "
+                    "with an easy/rest day before and after."
+                )
+            },
+            {
+                "feature": "Streak tracking",
+                "adaptation": (
+                    "Weekly streak becomes 'cycle streak' — completing the target "
+                    "number of runs per cycle, not per calendar week."
+                )
+            },
+            {
+                "feature": "Calendar display",
+                "adaptation": (
+                    "The calendar always shows dates (not 'Week 3 Day 2'). "
+                    "Non-standard cycles are invisible in the UI — the user just "
+                    "sees their workouts on specific dates."
+                )
+            },
+            {
+                "feature": "Polarized training validation",
+                "adaptation": (
+                    "Intensity distribution checked per cycle instead of per week. "
+                    "The 80/20 rule still applies but over the cycle length."
+                )
+            }
+        ]
+    },
+
+    "healthcare_worker_specific": {
+        "notes": (
+            "Healthcare workers (nurses, doctors, EMTs) face unique challenges: "
+            "12-hour shifts that leave zero training time, night shifts that "
+            "disrupt sleep and recovery, and rotating schedules that change "
+            "every few weeks. The app should:"
+        ),
+        "features": [
+            "Accept that some cycle-days have ZERO availability (12-hour shifts)",
+            "Never schedule hard sessions after a night shift",
+            "Account for sleep disruption in readiness scoring",
+            "Allow marking days as 'night shift' which auto-reduces next-day intensity",
+            "Support 2-3 runs per cycle if that's all that's available — quality over quantity"
+        ],
+
+        "night_shift_handling": {
+            "user_marks": "Which days are night shifts",
+            "plan_effect": (
+                "Day after a night shift is auto-marked as rest or very easy only. "
+                "No hard sessions within 24 hours of a night shift ending. "
+                "This is similar to jet lag — circadian disruption affects performance "
+                "and injury risk."
+            )
+        }
+    }
+}
+```
+```
+
+### 12.8 Running History Import (Strava/Garmin/Apple Health)
+
+Rather than relying solely on self-reported fitness during onboarding,
+the app should offer to import running history from existing platforms.
+This gives the plan generator accurate data about the user's actual
+current fitness, paces, and training patterns.
+
+```python
+RUNNING_HISTORY_IMPORT = {
+    "supported_platforms": [
+        {
+            "platform": "strava",
+            "import_method": "OAuth2 API",
+            "data_extracted": [
+                "run activities (last 6 months)",
+                "weekly mileage averages",
+                "pace data by workout type",
+                "longest recent run",
+                "training frequency (runs per week)"
+            ]
+        },
+        {
+            "platform": "garmin_connect",
+            "import_method": "OAuth2 API or .FIT file upload",
+            "data_extracted": [
+                "run activities with HR data",
+                "VO2max estimate",
+                "training status/load",
+                "race predictions",
+                "weekly mileage"
+            ]
+        },
+        {
+            "platform": "apple_health",
+            "import_method": "HealthKit API (iOS only)",
+            "data_extracted": [
+                "workout records",
+                "distance and pace",
+                "heart rate zones",
+                "cardio fitness (VO2max estimate)"
+            ]
+        },
+        {
+            "platform": "manual_entry",
+            "import_method": "User enters key metrics",
+            "data_fields": [
+                "average_weekly_mileage_km",
+                "runs_per_week",
+                "longest_recent_run_km",
+                "recent_race_times (optional)",
+                "typical_easy_pace"
+            ]
+        }
+    ],
+
+    "how_imported_data_is_used": {
+        "skill_level_assessment": (
+            "Cross-reference imported data with the skill level assessment "
+            "(Section 5G.7). Imported data takes priority over self-reporting "
+            "because it's objective."
+        ),
+        "starting_mileage": (
+            "Set plan starting mileage based on actual recent average, "
+            "not a default. If user ran 30 km/week last month, the plan "
+            "starts near 30 km/week, not at a generic beginner baseline."
+        ),
+        "pace_calibration": (
+            "If VDOT mode selected, use recent race times or training paces "
+            "to calibrate zones. Much more accurate than self-reported pace."
+        ),
+        "injury_risk_baseline": (
+            "Import training load history to establish the 'chronic' baseline "
+            "for ACWR calculation (Section 11.12) from day one, instead of "
+            "waiting 4 weeks to build the baseline."
+        )
+    },
+
+    "privacy": {
+        "what_we_import": "Only running/workout data. No social, no photos, no routes.",
+        "data_retention": "Imported data stored locally. User can delete at any time.",
+        "ongoing_sync": (
+            "Optional: keep syncing new workouts from Strava/Garmin so the "
+            "plan generator always has current data. User controls this."
+        )
+    },
+
+    "when_no_import": (
+        "If user declines import, fall back to the questionnaire-based "
+        "onboarding (Section 5G.7). The plan will still work — it just "
+        "takes 2-3 weeks longer to calibrate accurately."
+    )
+}
+```
+
+### 12.9 Multi-Race Season Planning
+
+The app enforces one active plan at a time, but many runners race multiple
+times per season (e.g., a 10K tune-up race 4 weeks before a half marathon,
+or a spring half marathon followed by a fall marathon). The app should
+support this without requiring the user to start from scratch each time.
+
+```python
+MULTI_RACE_SUPPORT = {
+    "description": (
+        "While only one plan is active at a time, the app should make "
+        "transitioning between plans seamless. A runner finishing a 10K "
+        "plan who wants to start a half marathon plan shouldn't lose "
+        "their fitness data or have to re-onboard."
+    ),
+
+    "tune_up_races": {
+        "description": (
+            "Races that happen DURING a training plan — not the goal race. "
+            "Common examples: a 5K during half marathon training, a 10K "
+            "during marathon training. These don't require a new plan."
+        ),
+        "handling": {
+            "schedule_as_workout": (
+                "The tune-up race replaces a planned hard session in that "
+                "week. It does NOT add volume — it replaces."
+            ),
+            "taper": "No taper for tune-up races (maybe 1 easy day before)",
+            "recovery": "1-2 easy days after, then resume plan",
+            "pace_data": (
+                "Race result feeds into the race time predictor (Section 11C) "
+                "and can recalibrate VDOT paces."
+            )
+        },
+        "ui_flow": (
+            "User adds a tune-up race to their calendar. The app asks: "
+            "'Is this your goal race or a tune-up?' If tune-up, it slots "
+            "into the existing plan with minimal disruption."
+        )
+    },
+
+    "plan_transitions": {
+        "description": (
+            "When a user finishes one plan (including recovery phase) and "
+            "wants to start another for a different distance or date."
+        ),
+        "carry_forward": [
+            "Current fitness level (weekly mileage, paces, VDOT)",
+            "Injury history",
+            "Schedule preferences",
+            "Streak data (continues across plans)",
+            "Pain tracking (if active)"
+        ],
+        "transition_options": {
+            "immediate_next_plan": {
+                "condition": "Recovery phase from previous plan is complete",
+                "action": (
+                    "Start new plan with starting mileage = 80% of previous "
+                    "plan's peak mileage (fitness is maintained)."
+                )
+            },
+            "off_season_gap": {
+                "condition": "More than 2 weeks between plans",
+                "action": (
+                    "Auto-assess current fitness based on recent activity. "
+                    "If user kept running, credit that. If they took time off, "
+                    "apply the returning runner protocol."
+                )
+            },
+            "stepping_up_distance": {
+                "condition": "New plan is a longer distance (e.g., 10K → half)",
+                "action": (
+                    "Start the new plan's base phase at a level appropriate "
+                    "for the user's demonstrated fitness from the completed plan. "
+                    "Skip early base building if the runner is already above "
+                    "the new plan's starting requirements."
+                ),
+                "message": (
+                    "Great job finishing your 10K plan! Your fitness carries "
+                    "over — we're starting your half marathon plan at a level "
+                    "that matches where you are, not from scratch."
+                )
+            }
+        }
+    },
+
+    "race_calendar": {
+        "description": (
+            "Users can add multiple future races to a calendar. The app "
+            "helps them decide which is the goal race and which are tune-ups. "
+            "Only one plan is generated at a time, but the calendar shows "
+            "the full season view."
+        ),
+        "fields": {
+            "race_name": "string",
+            "race_date": "Date",
+            "race_distance": "5K | 10K | half_marathon | marathon",
+            "race_type": "goal | tune_up | fun_run",
+            "registered": "boolean",
+            "notes": "string"
+        }
+    }
+}
 ```
 
 ---
