@@ -222,4 +222,68 @@ i.fas, i.far {
     .workout-distance {
         font-size: 0.65rem;
     }
+
+    .sidebar {
+        width: 100%;
+        position: relative;
+        height: auto;
+    }
+
+    .page {
+        flex-direction: column;
+    }
+
+    .view-switcher .btn {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+
+    .step-indicators .step {
+        width: 28px;
+        height: 28px;
+        font-size: 0.75rem;
+    }
+
+    .onboarding-card {
+        margin: 0 5px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar, .nav, .navbar, .btn, .step-indicators,
+    .view-switcher, .export-panel, button, .alert {
+        display: none !important;
+    }
+
+    .calendar-grid {
+        border: 1px solid #000;
+    }
+
+    .calendar-day {
+        border: 1px solid #ccc;
+        page-break-inside: avoid;
+    }
+
+    .workout-badge {
+        border: 1px solid #333;
+        color: #000 !important;
+        background: #fff !important;
+    }
+
+    .card {
+        border: 1px solid #ccc;
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+
+    body {
+        color: #000;
+        background: #fff;
+    }
+
+    a {
+        text-decoration: none;
+        color: #000;
+    }
 }

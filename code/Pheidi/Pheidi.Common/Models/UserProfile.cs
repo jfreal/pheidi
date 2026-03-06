@@ -3,6 +3,7 @@ namespace Pheidi.Common.Models;
 public class UserProfile
 {
     public int Id { get; set; }
+    public int? UserId { get; set; }
     public ExperienceLevel ExperienceLevel { get; set; } = ExperienceLevel.Beginner;
     public PacePreference PacePreference { get; set; } = PacePreference.RPE;
     public bool UseMiles { get; set; } = true;

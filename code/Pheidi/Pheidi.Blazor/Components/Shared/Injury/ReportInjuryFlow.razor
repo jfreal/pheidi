@@ -1,0 +1,109 @@
+@using Pheidi.Common.Engines
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-band-aid me-2"></i> Report an Injury</h5>
+    </div>
+    <div class="card-body">
+        @if (!submitted)
+        {
+            <div class="mb-3">
+                <label class="form-label fw-bold">Where does it hurt?</label>
+                <div class="d-flex gap-2 flex-wrap">
+                    @foreach (var part in Enum.GetValues<BodyPart>())
+                    {
+                        var p = part;
+                        <button class="btn btn-sm @(selectedBodyPart == p ? "btn-primary" : "btn-outline-secondary")"
+                                @onclick="() => selectedBodyPart = p">
+                            @FormatBodyPart(p)
+                        </button>
+                    }
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-bold">Pain Severity: @severity / 10</label>
+                <input type="range" class="form-range" min="1" max="10" @bind="severity" @bind:event="oninput" />
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>Mild</span>
+                    <span>Moderate</span>
+                    <span>Severe</span>
+                </div>
+            </div>
+
+            <div class="alert @GuidanceAlertClass() mb-3">
+                <i class="fas @GuidanceIcon() me-2"></i>
+                @InjuryEngine.GetGuidance(severity)
+            </div>
+
+            @if (InjuryEngine.ShouldRecommendMedicalClearance(new InjuryReport { Severity = severity }))
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-user-md me-2"></i>
+                    We recommend consulting a healthcare provider for this level of pain.
+                </div>
+            }
+
+            <button class="btn btn-primary" @onclick="Submit">
+                <i class="fas fa-save me-1"></i> Submit Report
+            </button>
+            <button class="btn btn-outline-secondary ms-2" @onclick="() => OnCancel.InvokeAsync()">
+                Cancel
+            </button>
+        }
+        else
+        {
+            <div class="alert alert-info">
+                <i class="fas fa-check-circle me-2"></i>
+                Injury reported. Your upcoming workouts have been adjusted based on severity @severity.
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public EventCallback<InjuryReport> OnReport { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private BodyPart? selectedBodyPart;
+    private int severity = 3;
+    private bool submitted;
+
+    private async Task Submit()
+    {
+        if (!selectedBodyPart.HasValue) return;
+
+        var report = new InjuryReport
+        {
+            BodyPart = selectedBodyPart.Value,
+            Severity = severity,
+            PainHistory = [new PainEntry { Severity = severity }]
+        };
+
+        submitted = true;
+        await OnReport.InvokeAsync(report);
+    }
+
+    private string GuidanceAlertClass() => severity switch
+    {
+        <= 3 => "alert-success",
+        <= 6 => "alert-warning",
+        _ => "alert-danger"
+    };
+
+    private string GuidanceIcon() => severity switch
+    {
+        <= 3 => "fa-check-circle",
+        <= 6 => "fa-exclamation-triangle",
+        _ => "fa-times-circle"
+    };
+
+    private static string FormatBodyPart(BodyPart part) => part switch
+    {
+        BodyPart.ITBand => "IT Band",
+        _ => part.ToString()
+    };
+}

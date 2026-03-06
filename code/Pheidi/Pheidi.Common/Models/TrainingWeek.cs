@@ -2,6 +2,8 @@ namespace Pheidi.Common.Models;
 
 public class TrainingWeek
 {
+    public int Id { get; set; }
+    public int TrainingPlanId { get; set; }
     public int WeekNumber { get; set; }
     public TrainingPhase Phase { get; set; }
     public List<ScheduledWorkout> Workouts { get; set; } = [];

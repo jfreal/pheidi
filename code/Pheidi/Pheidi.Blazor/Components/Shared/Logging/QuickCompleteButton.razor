@@ -1,0 +1,39 @@
+@using Pheidi.Common.Services
+
+<button class="btn @(Workout.Status == WorkoutStatus.Completed ? "btn-success" : "btn-outline-success")"
+        @onclick="Complete"
+        disabled="@(Workout.Status == WorkoutStatus.Completed)">
+    @if (Workout.Status == WorkoutStatus.Completed)
+    {
+        <i class="fas fa-check me-1"></i><text>Done</text>
+    }
+    else
+    {
+        <i class="fas fa-check-circle me-1"></i><text>Done</text>
+    }
+</button>
+
+@if (showMessage)
+{
+    <div class="alert alert-success mt-2 py-2">
+        @WorkoutLoggingService.GetPostWorkoutMessage(Workout.Type)
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public ScheduledWorkout Workout { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnCompleted { get; set; }
+
+    private bool showMessage;
+
+    private async Task Complete()
+    {
+        var service = new WorkoutLoggingService();
+        service.QuickComplete(Workout);
+        showMessage = true;
+        await OnCompleted.InvokeAsync();
+    }
+}

@@ -19,6 +19,7 @@ public enum WorkoutFeedback
 public class ScheduledWorkout
 {
     public int Id { get; set; }
+    public int TrainingWeekId { get; set; }
     public DateTime Date { get; set; }
     public DayOfWeek DayOfWeek => Date.DayOfWeek;
     public WorkoutType Type { get; set; } = WorkoutType.Rest;

@@ -1,0 +1,108 @@
+@page "/signin"
+@using Pheidi.Blazor.Services
+@inject OtpAuthService AuthService
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<div class="container" style="max-width: 400px; margin-top: 80px;">
+    <h2 class="text-center mb-4">Sign In</h2>
+
+    @if (!codeSent)
+    {
+        <div class="card p-4">
+            <div class="mb-3">
+                <label class="form-label">Email address</label>
+                <input type="email" class="form-control" @bind="email" @bind:event="oninput"
+                       placeholder="you@example.com" />
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning py-2">@errorMessage</div>
+            }
+            <button class="btn btn-primary w-100" @onclick="SendCode" disabled="@(sending || string.IsNullOrWhiteSpace(email))">
+                @if (sending)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Send Code
+            </button>
+        </div>
+    }
+    else
+    {
+        <div class="card p-4">
+            <p class="text-muted text-center">We sent a 6-digit code to <strong>@email</strong></p>
+            <div class="mb-3">
+                <label class="form-label">Enter code</label>
+                <input type="text" class="form-control text-center" @bind="code" @bind:event="oninput"
+                       maxlength="6" placeholder="000000" style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-warning py-2">@errorMessage</div>
+            }
+            <button class="btn btn-primary w-100 mb-2" @onclick="VerifyCode" disabled="@(verifying || code?.Length != 6)">
+                @if (verifying)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                Verify
+            </button>
+            <button class="btn btn-link w-100" @onclick="Reset">Use a different email</button>
+        </div>
+    }
+</div>
+
+@code {
+    private string email = string.Empty;
+    private string code = string.Empty;
+    private string? errorMessage;
+    private bool codeSent;
+    private bool sending;
+    private bool verifying;
+
+    private async Task SendCode()
+    {
+        errorMessage = null;
+        sending = true;
+
+        var success = await AuthService.SendCodeAsync(email);
+        if (success)
+        {
+            codeSent = true;
+        }
+        else
+        {
+            errorMessage = "Too many attempts. Please try again later.";
+        }
+
+        sending = false;
+    }
+
+    private async Task VerifyCode()
+    {
+        errorMessage = null;
+        verifying = true;
+
+        var user = await AuthService.VerifyCodeAsync(email, code);
+        if (user != null)
+        {
+            await AuthState.SignInAsync(user);
+            Navigation.NavigateTo("/setup");
+        }
+        else
+        {
+            errorMessage = "Invalid or expired code. Please try again.";
+        }
+
+        verifying = false;
+    }
+
+    private void Reset()
+    {
+        codeSent = false;
+        code = string.Empty;
+        errorMessage = null;
+    }
+}

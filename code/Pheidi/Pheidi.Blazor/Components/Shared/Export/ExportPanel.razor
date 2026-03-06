@@ -1,0 +1,96 @@
+@using Pheidi.Common.Services
+@inject ICalExportService ICalService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-download me-2"></i>Export & Share</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-grid gap-2">
+            <button class="btn btn-outline-primary" @onclick="DownloadIcs">
+                <i class="fas fa-calendar-alt me-2"></i>Download .ics File
+            </button>
+
+            <div class="input-group">
+                <input type="text" class="form-control" value="@subscribeUrl" readonly />
+                <button class="btn btn-outline-secondary" @onclick="CopySubscribeUrl">
+                    <i class="fas fa-copy"></i>
+                </button>
+            </div>
+            <small class="text-muted">Subscribe to this URL in your calendar app for live updates.</small>
+
+            @if (showCopied)
+            {
+                <div class="alert alert-success py-1 text-center">Copied to clipboard!</div>
+            }
+
+            <hr />
+
+            <div class="input-group">
+                <input type="text" class="form-control" value="@shareUrl" readonly />
+                <button class="btn btn-outline-secondary" @onclick="CopyShareUrl">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </div>
+            <small class="text-muted">Share a read-only view of your plan.</small>
+
+            <hr />
+
+            <button class="btn btn-outline-secondary" @onclick="PrintPlan">
+                <i class="fas fa-print me-2"></i>Print Plan
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public int UserId { get; set; }
+
+    private string subscribeUrl = string.Empty;
+    private string shareUrl = string.Empty;
+    private bool showCopied;
+
+    protected override void OnInitialized()
+    {
+        var baseUrl = Navigation.BaseUri.TrimEnd('/');
+        subscribeUrl = $"{baseUrl}/api/calendar/user-{UserId}";
+        shareUrl = $"{baseUrl}/api/shared/plan-{Plan.Id}";
+    }
+
+    private async Task DownloadIcs()
+    {
+        var bytes = ICalService.GenerateIcsFile(Plan);
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("eval",
+            $"{{const a=document.createElement('a');a.href='data:text/calendar;base64,{base64}';a.download='training-plan.ics';a.click();}}");
+    }
+
+    private async Task CopySubscribeUrl()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", subscribeUrl);
+        showCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        showCopied = false;
+    }
+
+    private async Task CopyShareUrl()
+    {
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
+        showCopied = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        showCopied = false;
+    }
+
+    private async Task PrintPlan()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+}

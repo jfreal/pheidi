@@ -10,6 +10,8 @@ public enum PlanStatus
 public class NewTrainingPlan
 {
     public int Id { get; set; }
+    public int? UserId { get; set; }
+    public int RaceGoalId { get; set; }
     public RaceGoal RaceGoal { get; set; } = new();
     public UserProfile UserProfile { get; set; } = new();
     public ProgressionPattern ProgressionPattern { get; set; } = ProgressionPattern.ThreeUpOneDown;

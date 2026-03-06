@@ -1,0 +1,77 @@
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="fas fa-trophy me-2"></i> Training Plan Complete!</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 text-center mb-4">
+            <div class="col-md-3">
+                <div class="fs-2 fw-bold text-primary">@TotalMilesLogged.ToString("F0")</div>
+                <small class="text-muted">Miles Logged</small>
+            </div>
+            <div class="col-md-3">
+                <div class="fs-2 fw-bold text-success">@Plan.CompletionPercentage.ToString("F0")%</div>
+                <small class="text-muted">Completion</small>
+            </div>
+            <div class="col-md-3">
+                <div class="fs-2 fw-bold text-info">@LongestRunLogged.ToString("F1")</div>
+                <small class="text-muted">Longest Run (mi)</small>
+            </div>
+            <div class="col-md-3">
+                <div class="fs-2 fw-bold">@TotalTrainingDays</div>
+                <small class="text-muted">Training Days</small>
+            </div>
+        </div>
+
+        <h6>Phase Breakdown</h6>
+        <table class="table table-sm">
+            <thead>
+                <tr>
+                    <th>Phase</th>
+                    <th>Weeks</th>
+                    <th>Completed Workouts</th>
+                    <th>Miles</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var phase in Enum.GetValues<TrainingPhase>())
+                {
+                    var phaseWeeks = Plan.Weeks.Where(w => w.Phase == phase).ToList();
+                    if (phaseWeeks.Count == 0) continue;
+                    var completed = phaseWeeks.SelectMany(w => w.Workouts).Count(w => w.Status == WorkoutStatus.Completed);
+                    var miles = phaseWeeks.SelectMany(w => w.Workouts).Where(w => w.ActualDistanceMiles.HasValue).Sum(w => w.ActualDistanceMiles!.Value);
+                    <tr>
+                        <td>@phase</td>
+                        <td>@phaseWeeks.Count</td>
+                        <td>@completed</td>
+                        <td>@miles.ToString("F1")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="alert alert-success">
+            Congratulations on completing your training plan! Every mile you logged brought you closer to your goal.
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    private decimal TotalMilesLogged => Plan.Weeks
+        .SelectMany(w => w.Workouts)
+        .Where(w => w.ActualDistanceMiles.HasValue)
+        .Sum(w => w.ActualDistanceMiles!.Value);
+
+    private decimal LongestRunLogged => Plan.Weeks
+        .SelectMany(w => w.Workouts)
+        .Where(w => w.ActualDistanceMiles.HasValue)
+        .Select(w => w.ActualDistanceMiles!.Value)
+        .DefaultIfEmpty(0)
+        .Max();
+
+    private int TotalTrainingDays => Plan.Weeks
+        .SelectMany(w => w.Workouts)
+        .Count(w => w.Status == WorkoutStatus.Completed);
+}

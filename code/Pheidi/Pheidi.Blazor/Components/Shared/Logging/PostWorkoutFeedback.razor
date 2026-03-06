@@ -1,0 +1,46 @@
+@using Pheidi.Common.Services
+
+<div class="mt-3">
+    <h6>How did that feel?</h6>
+    <div class="d-flex gap-2 flex-wrap">
+        @foreach (var option in feedbackOptions)
+        {
+            var fb = option;
+            <button class="btn btn-sm @(Workout.Feedback == fb.Value ? "btn-primary" : "btn-outline-secondary")"
+                    @onclick="() => SelectFeedback(fb.Value)">
+                @fb.Label
+            </button>
+        }
+        <button class="btn btn-sm btn-outline-secondary" @onclick="Dismiss">
+            Skip
+        </button>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ScheduledWorkout Workout { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnFeedbackGiven { get; set; }
+
+    private readonly (string Label, WorkoutFeedback Value)[] feedbackOptions =
+    [
+        ("Too Easy", WorkoutFeedback.TooEasy),
+        ("Just Right", WorkoutFeedback.JustRight),
+        ("Tough", WorkoutFeedback.Tough),
+        ("Too Hard", WorkoutFeedback.TooHard)
+    ];
+
+    private async Task SelectFeedback(WorkoutFeedback feedback)
+    {
+        var service = new WorkoutLoggingService();
+        service.RecordFeedback(Workout, feedback);
+        await OnFeedbackGiven.InvokeAsync();
+    }
+
+    private async Task Dismiss()
+    {
+        await OnFeedbackGiven.InvokeAsync();
+    }
+}

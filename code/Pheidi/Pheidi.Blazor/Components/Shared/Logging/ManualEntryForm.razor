@@ -1,0 +1,66 @@
+@using Pheidi.Common.Services
+
+<div class="p-3 border rounded">
+    <h6>Log Workout Details</h6>
+
+    <div class="row g-2 mb-2">
+        <div class="col-4">
+            <label class="form-label small">Distance (mi)</label>
+            <input type="number" class="form-control form-control-sm" step="0.1" min="0"
+                   @bind="distance" @bind:event="oninput" placeholder="optional" />
+        </div>
+        <div class="col-4">
+            <label class="form-label small">Time (min)</label>
+            <input type="number" class="form-control form-control-sm" step="1" min="0"
+                   @bind="durationMinutes" @bind:event="oninput" placeholder="optional" />
+        </div>
+        <div class="col-4">
+            <label class="form-label small">Effort (1-10)</label>
+            <input type="number" class="form-control form-control-sm" min="1" max="10"
+                   @bind="effort" @bind:event="oninput" placeholder="optional" />
+        </div>
+    </div>
+
+    @if (effort.HasValue)
+    {
+        <small class="text-muted">@PaceCalculator.GetRpeDescription(effort.Value)</small>
+    }
+
+    <button class="btn btn-primary btn-sm mt-2" @onclick="Submit">
+        <i class="fas fa-save me-1"></i> Log Workout
+    </button>
+
+    @if (submitted)
+    {
+        <div class="alert alert-success mt-2 py-2">
+            @WorkoutLoggingService.GetPostWorkoutMessage(Workout.Type)
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public ScheduledWorkout Workout { get; set; } = default!;
+
+    [Parameter]
+    public EventCallback OnLogged { get; set; }
+
+    private decimal? distance;
+    private int? durationMinutes;
+    private int? effort;
+    private bool submitted;
+
+    protected override void OnInitialized()
+    {
+        distance = Workout.TargetDistanceMiles;
+    }
+
+    private async Task Submit()
+    {
+        var service = new WorkoutLoggingService();
+        var duration = durationMinutes.HasValue ? TimeSpan.FromMinutes(durationMinutes.Value) : (TimeSpan?)null;
+        service.LogWorkout(Workout, distance, duration, effort);
+        submitted = true;
+        await OnLogged.InvokeAsync();
+    }
+}

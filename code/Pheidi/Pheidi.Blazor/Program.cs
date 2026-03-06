@@ -1,5 +1,8 @@
+using Microsoft.EntityFrameworkCore;
 using Pheidi.Blazor.Components;
+using Pheidi.Blazor.Data;
 using Pheidi.Blazor.Services;
+using Pheidi.Common.Models;
 using Pheidi.Common.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -7,10 +10,26 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
+        ?? "Data Source=pheidi.db"));
+
 builder.Services.AddScoped<PlanStateService>();
 builder.Services.AddScoped<PaceCalculator>();
+builder.Services.AddScoped<OtpAuthService>();
+builder.Services.AddScoped<AuthStateService>();
+builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<PlanRepository>();
+builder.Services.AddScoped<WorkoutRepository>();
+builder.Services.AddScoped<ICalExportService>();
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 if (!app.Environment.IsDevelopment())
 {
@@ -21,6 +40,63 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
+
+// Calendar subscription endpoint
+app.MapGet("/api/calendar/{token}", async (string token, AppDbContext db, ICalExportService icalService) =>
+{
+    // Token format: user-{userId} (simple token for dev)
+    if (!token.StartsWith("user-") || !int.TryParse(token.AsSpan(5), out var userId))
+        return Results.NotFound();
+
+    var plan = await db.TrainingPlans
+        .Include(p => p.RaceGoal)
+        .Include(p => p.Weeks)
+            .ThenInclude(w => w.Workouts)
+        .Where(p => p.UserId == userId && p.Status == PlanStatus.Active)
+        .FirstOrDefaultAsync();
+
+    if (plan == null) return Results.NotFound();
+
+    var ics = icalService.GenerateICalendar(plan);
+    return Results.Text(ics, "text/calendar");
+});
+
+// Shared read-only plan view endpoint
+app.MapGet("/api/shared/{token}", async (string token, AppDbContext db) =>
+{
+    if (!token.StartsWith("plan-") || !int.TryParse(token.AsSpan(5), out var planId))
+        return Results.NotFound();
+
+    var plan = await db.TrainingPlans
+        .Include(p => p.RaceGoal)
+        .Include(p => p.Weeks)
+            .ThenInclude(w => w.Workouts)
+        .Where(p => p.Id == planId)
+        .FirstOrDefaultAsync();
+
+    if (plan == null) return Results.NotFound();
+
+    return Results.Ok(new
+    {
+        plan.RaceGoal.Distance,
+        plan.RaceGoal.RaceDate,
+        plan.TotalWeeks,
+        TotalMiles = plan.TotalPlannedMiles,
+        Weeks = plan.Weeks.Select(w => new
+        {
+            w.WeekNumber,
+            w.Phase,
+            TotalDistance = w.TotalPlannedDistance,
+            Workouts = w.Workouts.Select(wo => new
+            {
+                wo.Date,
+                wo.Type,
+                wo.Description,
+                wo.TargetDistanceMiles
+            })
+        })
+    });
+});
 
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
