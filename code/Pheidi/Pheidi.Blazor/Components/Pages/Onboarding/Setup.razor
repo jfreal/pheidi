@@ -43,7 +43,7 @@
                     <PacePreferenceStep Profile="PlanState.UserProfile" />
                     break;
                 case 3:
-                    <AvailableDaysStep Profile="PlanState.UserProfile" />
+                    <AvailableDaysStep Profile="PlanState.UserProfile" OnChanged="StateHasChanged" />
                     break;
                 case 4:
                     <PlanGenerationStep RaceGoal="PlanState.RaceGoal" Profile="PlanState.UserProfile" OnGenerate="GeneratePlan" />
@@ -69,6 +69,12 @@
 @code {
     private int currentStep = 0;
     private readonly string[] stepNames = ["Race Goal", "Experience", "Pace", "Schedule", "Generate"];
+
+    protected override void OnInitialized()
+    {
+        if (PlanState.RaceGoal.RaceDate == default)
+            PlanState.RaceGoal.RaceDate = DateTime.Today.AddMonths(4);
+    }
 
     private void NextStep()
     {

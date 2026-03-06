@@ -1,34 +1,54 @@
-<div class="top-row ps-4 navbar navbar-dark">
-    <a class="navbar-brand" href="">Pheidi</a>
-    <button class="navbar-toggler" @onclick="ToggleNavMenu">
-        <span class="navbar-toggler-icon"></span>
-    </button>
-</div>
+@using Pheidi.Blazor.Services
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
 
-<div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
-    <ul class="nav flex-column">
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <i class="fas fa-home fa-fw"></i> Home
-            </NavLink>
-        </li>
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="setup">
-                <i class="fas fa-clipboard-list fa-fw"></i> New Plan
-            </NavLink>
-        </li>
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="calendar">
-                <i class="fas fa-calendar-alt fa-fw"></i> Calendar
-            </NavLink>
-        </li>
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="signin">
-                <i class="fas fa-user fa-fw"></i> Sign In
-            </NavLink>
-        </li>
-    </ul>
-</div>
+<nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+    <div class="container">
+        <a class="navbar-brand" href=""><i class="fas fa-running me-2"></i>Pheidi</a>
+        <button class="navbar-toggler" type="button" @onclick="ToggleNavMenu">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="@NavMenuCssClass navbar-collapse">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <i class="fas fa-home fa-fw me-1"></i>Home
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="setup">
+                        <i class="fas fa-clipboard-list fa-fw me-1"></i>New Plan
+                    </NavLink>
+                </li>
+                <li class="nav-item">
+                    <NavLink class="nav-link" href="calendar">
+                        <i class="fas fa-calendar-alt fa-fw me-1"></i>Calendar
+                    </NavLink>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                @if (AuthState.IsAuthenticated)
+                {
+                    <li class="nav-item">
+                        <span class="nav-link text-muted">@AuthState.CurrentUser?.Email</span>
+                    </li>
+                    <li class="nav-item">
+                        <button class="btn btn-sm btn-outline-light my-1" @onclick="SignOut">Sign Out</button>
+                    </li>
+                }
+                else
+                {
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="signin">
+                            <i class="fas fa-user fa-fw me-1"></i>Sign In
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</nav>
 
 @code {
     private bool collapseNavMenu = true;
@@ -38,5 +58,11 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    private async Task SignOut()
+    {
+        await AuthState.SignOutAsync();
+        Navigation.NavigateTo("/");
     }
 }

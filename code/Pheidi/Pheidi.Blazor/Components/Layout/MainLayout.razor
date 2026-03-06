@@ -1,41 +1,22 @@
 @inherits LayoutComponentBase
 @using Pheidi.Blazor.Services
 @inject AuthStateService AuthState
-@inject NavigationManager Navigation
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<NavMenu />
 
-    <main>
-        <div class="top-row px-4">
-            @if (AuthState.IsAuthenticated)
-            {
-                <span class="me-3 text-muted">@AuthState.CurrentUser?.Email</span>
-                <button class="btn btn-sm btn-outline-secondary" @onclick="SignOut">Sign Out</button>
-            }
-            else
-            {
-                <a href="signin" class="btn btn-sm btn-primary">Sign In</a>
-            }
-        </div>
-
-        <article class="content px-4">
-            <ErrorBoundary>
-                <ChildContent>
-                    @Body
-                </ChildContent>
-                <ErrorContent>
-                    <div class="alert alert-danger mt-4">
-                        <h4>Something went wrong</h4>
-                        <p>An unexpected error occurred. Please try refreshing the page.</p>
-                    </div>
-                </ErrorContent>
-            </ErrorBoundary>
-        </article>
-    </main>
-</div>
+<main class="container" style="padding-top: 70px;">
+    <ErrorBoundary>
+        <ChildContent>
+            @Body
+        </ChildContent>
+        <ErrorContent>
+            <div class="alert alert-danger mt-4">
+                <h4>Something went wrong</h4>
+                <p>An unexpected error occurred. Please try refreshing the page.</p>
+            </div>
+        </ErrorContent>
+    </ErrorBoundary>
+</main>
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -45,11 +26,5 @@
             await AuthState.InitializeAsync();
             StateHasChanged();
         }
-    }
-
-    private async Task SignOut()
-    {
-        await AuthState.SignOutAsync();
-        Navigation.NavigateTo("/");
     }
 }
