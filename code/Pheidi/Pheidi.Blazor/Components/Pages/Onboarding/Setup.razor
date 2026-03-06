@@ -1,0 +1,99 @@
+@page "/setup"
+@rendermode InteractiveServer
+@inject PlanStateService PlanState
+@inject NavigationManager Navigation
+
+<PageTitle>Pheidi - Setup Your Plan</PageTitle>
+
+<div class="row justify-content-center mt-4">
+    <div class="col-lg-8 col-md-10">
+        <h3 class="mb-4"><i class="fas fa-running"></i> Set Up Your Training Plan</h3>
+
+        <!-- Step indicators -->
+        <div class="d-flex mb-4">
+            @for (int i = 0; i < stepNames.Length; i++)
+            {
+                var stepIndex = i;
+                <div class="flex-fill text-center">
+                    <div class="step-indicator @(stepIndex == currentStep ? "active" : stepIndex < currentStep ? "completed" : "")">
+                        @if (stepIndex < currentStep)
+                        {
+                            <i class="fas fa-check"></i>
+                        }
+                        else
+                        {
+                            @(stepIndex + 1)
+                        }
+                    </div>
+                    <small class="d-block mt-1 @(stepIndex == currentStep ? "fw-bold" : "text-muted")">@stepNames[stepIndex]</small>
+                </div>
+            }
+        </div>
+
+        <div class="bg-white rounded p-4 shadow-sm">
+            @switch (currentStep)
+            {
+                case 0:
+                    <RaceGoalStep RaceGoal="PlanState.RaceGoal" />
+                    break;
+                case 1:
+                    <ExperienceLevelStep Profile="PlanState.UserProfile" />
+                    break;
+                case 2:
+                    <PacePreferenceStep Profile="PlanState.UserProfile" />
+                    break;
+                case 3:
+                    <AvailableDaysStep Profile="PlanState.UserProfile" />
+                    break;
+                case 4:
+                    <PlanGenerationStep RaceGoal="PlanState.RaceGoal" Profile="PlanState.UserProfile" OnGenerate="GeneratePlan" />
+                    break;
+            }
+        </div>
+
+        <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-outline-secondary" @onclick="PreviousStep" disabled="@(currentStep == 0)">
+                <i class="fas fa-arrow-left"></i> Back
+            </button>
+
+            @if (currentStep < stepNames.Length - 1)
+            {
+                <button class="btn btn-primary" @onclick="NextStep" disabled="@(!CanAdvance())">
+                    Next <i class="fas fa-arrow-right"></i>
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private int currentStep = 0;
+    private readonly string[] stepNames = ["Race Goal", "Experience", "Pace", "Schedule", "Generate"];
+
+    private void NextStep()
+    {
+        if (currentStep < stepNames.Length - 1 && CanAdvance())
+            currentStep++;
+    }
+
+    private void PreviousStep()
+    {
+        if (currentStep > 0)
+            currentStep--;
+    }
+
+    private bool CanAdvance() => currentStep switch
+    {
+        0 => PlanState.RaceGoal.RaceDate > DateTime.Today,
+        1 => true,
+        2 => true,
+        3 => PlanState.UserProfile.AvailableDays.Length >= 3,
+        _ => true
+    };
+
+    private void GeneratePlan()
+    {
+        PlanState.GeneratePlan();
+        Navigation.NavigateTo("/calendar");
+    }
+}

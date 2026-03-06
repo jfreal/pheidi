@@ -1,0 +1,71 @@
+<h4>Which days can you train?</h4>
+<p class="text-muted">Select at least 3 days. We'll place your long run on a weekend day.</p>
+
+<div class="d-flex gap-2 flex-wrap mb-3">
+    @foreach (var day in allDays)
+    {
+        var d = day;
+        var isSelected = selectedDays.Contains(d);
+        <button class="btn btn-lg @(isSelected ? "btn-primary" : "btn-outline-secondary")"
+                style="min-width: 80px;"
+                @onclick="() => ToggleDay(d)">
+            @d.ToString()[..3]
+        </button>
+    }
+</div>
+
+@if (selectedDays.Count < 3)
+{
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle"></i> Please select at least 3 training days. Currently selected: @selectedDays.Count
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> @selectedDays.Count days selected. Long run suggested for
+        <strong>@SuggestedLongRunDay()</strong>.
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public UserProfile Profile { get; set; } = default!;
+
+    private readonly DayOfWeek[] allDays =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    private HashSet<DayOfWeek> selectedDays = [];
+
+    protected override void OnInitialized()
+    {
+        selectedDays = new HashSet<DayOfWeek>(Profile.AvailableDays);
+    }
+
+    private void ToggleDay(DayOfWeek day)
+    {
+        if (selectedDays.Contains(day))
+            selectedDays.Remove(day);
+        else
+            selectedDays.Add(day);
+
+        Profile.AvailableDays = selectedDays.OrderBy(d => d).ToArray();
+
+        if (selectedDays.Contains(DayOfWeek.Saturday))
+            Profile.PreferredLongRunDay = DayOfWeek.Saturday;
+        else if (selectedDays.Contains(DayOfWeek.Sunday))
+            Profile.PreferredLongRunDay = DayOfWeek.Sunday;
+        else if (selectedDays.Count > 0)
+            Profile.PreferredLongRunDay = selectedDays.Last();
+    }
+
+    private string SuggestedLongRunDay()
+    {
+        if (selectedDays.Contains(DayOfWeek.Saturday)) return "Saturday";
+        if (selectedDays.Contains(DayOfWeek.Sunday)) return "Sunday";
+        return selectedDays.LastOrDefault().ToString();
+    }
+}

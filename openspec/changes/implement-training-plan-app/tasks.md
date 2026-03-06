@@ -1,64 +1,64 @@
 ## 1. Core Data Models (Pheidi.Common/Models)
 
-- [ ] 1.1 Create RaceDistance enum (FiveK, TenK, HalfMarathon, FullMarathon) with distance conversion methods (km/miles)
-- [ ] 1.2 Create WorkoutType enum (Easy, Tempo, Intervals, LongRun, Recovery, Fartlek, HillRepeats, RacePace, CrossTraining, Strength, Rest)
-- [ ] 1.3 Create TrainingPhase enum (Base, Build, Peak, Taper)
-- [ ] 1.4 Create ExperienceLevel enum (Beginner, Intermediate, Advanced) with constraints (max run days, restrictions)
-- [ ] 1.5 Create ProgressionPattern enum (Linear, TwoUpOneDown, ThreeUpOneDown, FourUpOneDown)
-- [ ] 1.6 Create PacePreference enum (VDOT, RPE) and PaceZone model with VDOT zone definitions and RPE scale
-- [ ] 1.7 Create UserProfile model (ExperienceLevel, PacePreference, units, available days)
-- [ ] 1.8 Create RaceGoal model (RaceDistance, race date, optional target time)
-- [ ] 1.9 Create ScheduledWorkout model (date, WorkoutType, target distance/duration, PaceZone, warmup, cooldown, completion status, actual values, feedback)
-- [ ] 1.10 Create TrainingWeek model (week number, TrainingPhase, list of ScheduledWorkouts, total planned distance)
-- [ ] 1.11 Create updated TrainingPlan model (RaceGoal, UserProfile, list of TrainingWeeks, ProgressionPattern, plan status)
-- [ ] 1.12 Write unit tests for model creation, distance conversions, and TrainingWeek total distance calculation
+- [x] 1.1 Create RaceDistance enum (FiveK, TenK, HalfMarathon, FullMarathon) with distance conversion methods (km/miles)
+- [x] 1.2 Create WorkoutType enum (Easy, Tempo, Intervals, LongRun, Recovery, Fartlek, HillRepeats, RacePace, CrossTraining, Strength, Rest)
+- [x] 1.3 Create TrainingPhase enum (Base, Build, Peak, Taper)
+- [x] 1.4 Create ExperienceLevel enum (Beginner, Intermediate, Advanced) with constraints (max run days, restrictions)
+- [x] 1.5 Create ProgressionPattern enum (Linear, TwoUpOneDown, ThreeUpOneDown, FourUpOneDown)
+- [x] 1.6 Create PacePreference enum (VDOT, RPE) and PaceZone model with VDOT zone definitions and RPE scale
+- [x] 1.7 Create UserProfile model (ExperienceLevel, PacePreference, units, available days)
+- [x] 1.8 Create RaceGoal model (RaceDistance, race date, optional target time)
+- [x] 1.9 Create ScheduledWorkout model (date, WorkoutType, target distance/duration, PaceZone, warmup, cooldown, completion status, actual values, feedback)
+- [x] 1.10 Create TrainingWeek model (week number, TrainingPhase, list of ScheduledWorkouts, total planned distance)
+- [x] 1.11 Create updated TrainingPlan model (RaceGoal, UserProfile, list of TrainingWeeks, ProgressionPattern, plan status)
+- [x] 1.12 Write unit tests for model creation, distance conversions, and TrainingWeek total distance calculation
 
 ## 2. Plan Generation Engine (Pheidi.Common/Engines)
 
-- [ ] 2.1 Create PlanGenerationEngine class with Generate(RaceGoal, UserProfile) method signature
-- [ ] 2.2 Implement plan duration calculation from race distance (default midpoints: 5K→10wk, 10K→12wk, Half→14wk, Full→18wk)
-- [ ] 2.3 Implement phase allocation algorithm (Base 25%, Build 40%, Peak 15%, Taper 20%, rounded to whole weeks)
-- [ ] 2.4 Implement Linear progression pattern for long run distances
-- [ ] 2.5 Implement 2-up-1-down, 3-up-1-down, and 4-up-1-down progression patterns
-- [ ] 2.6 Implement long run peak distance caps by race distance (5K→10mi, 10K→14mi, Half→14mi, Full→22mi)
-- [ ] 2.7 Implement weekly workout distribution — assign workout types to available days based on phase and experience
-- [ ] 2.8 Implement experience-level volume scaling (Beginner peak ≤35mi, Intermediate ≤45mi, Advanced ≤55mi for marathon)
-- [ ] 2.9 Implement taper algorithm (75% → 60% → 40% volume reduction)
-- [ ] 2.10 Implement warm-up/cool-down auto-assignment for quality workouts
-- [ ] 2.11 Implement backward date assignment from race date
-- [ ] 2.12 Enforce one active plan at a time (archive previous plan on new generation)
-- [ ] 2.13 Write unit tests for phase allocation, progression patterns, volume scaling, and taper
+- [x] 2.1 Create PlanGenerationEngine class with Generate(RaceGoal, UserProfile) method signature
+- [x] 2.2 Implement plan duration calculation from race distance (default midpoints: 5K→10wk, 10K→12wk, Half→14wk, Full→18wk)
+- [x] 2.3 Implement phase allocation algorithm (Base 25%, Build 40%, Peak 15%, Taper 20%, rounded to whole weeks)
+- [x] 2.4 Implement Linear progression pattern for long run distances
+- [x] 2.5 Implement 2-up-1-down, 3-up-1-down, and 4-up-1-down progression patterns
+- [x] 2.6 Implement long run peak distance caps by race distance (5K→10mi, 10K→14mi, Half→14mi, Full→22mi)
+- [x] 2.7 Implement weekly workout distribution — assign workout types to available days based on phase and experience
+- [x] 2.8 Implement experience-level volume scaling (Beginner peak ≤35mi, Intermediate ≤45mi, Advanced ≤55mi for marathon)
+- [x] 2.9 Implement taper algorithm (75% → 60% → 40% volume reduction)
+- [x] 2.10 Implement warm-up/cool-down auto-assignment for quality workouts
+- [x] 2.11 Implement backward date assignment from race date
+- [x] 2.12 Enforce one active plan at a time (archive previous plan on new generation)
+- [x] 2.13 Write unit tests for phase allocation, progression patterns, volume scaling, and taper
 
 ## 3. Pace Calculator Service (Pheidi.Common/Services)
 
-- [ ] 3.1 Create PaceCalculator service with VDOT-based pace zone calculation
-- [ ] 3.2 Implement RPE effort description mapping (1-10 scale to descriptive labels)
-- [ ] 3.3 Implement VDOT lookup from recent race time
-- [ ] 3.4 Write unit tests for pace calculations and VDOT lookup
+- [x] 3.1 Create PaceCalculator service with VDOT-based pace zone calculation
+- [x] 3.2 Implement RPE effort description mapping (1-10 scale to descriptive labels)
+- [x] 3.3 Implement VDOT lookup from recent race time
+- [x] 3.4 Write unit tests for pace calculations and VDOT lookup
 
 ## 4. Onboarding UI (Pheidi.Blazor/Components)
 
-- [ ] 4.1 Create OnboardingLayout component with stepped flow navigation (back/next, step indicators)
-- [ ] 4.2 Create RaceGoalStep component — distance selector, date picker, optional target time input
-- [ ] 4.3 Add date validation (minimum weeks check based on race distance)
-- [ ] 4.4 Create ExperienceLevelStep component — three cards with descriptions and constraint previews
-- [ ] 4.5 Create PacePreferenceStep component — VDOT vs RPE toggle with explanations, optional VDOT input
-- [ ] 4.6 Create AvailableDaysStep component — day-of-week checkboxes with minimum 3 validation, long run day suggestion
-- [ ] 4.7 Create PlanGenerationStep component — summary of choices, "Generate Plan" button, loading state
-- [ ] 4.8 Wire up PlanGenerationEngine to generate plan on button click and navigate to calendar
+- [x] 4.1 Create OnboardingLayout component with stepped flow navigation (back/next, step indicators)
+- [x] 4.2 Create RaceGoalStep component — distance selector, date picker, optional target time input
+- [x] 4.3 Add date validation (minimum weeks check based on race distance)
+- [x] 4.4 Create ExperienceLevelStep component — three cards with descriptions and constraint previews
+- [x] 4.5 Create PacePreferenceStep component — VDOT vs RPE toggle with explanations, optional VDOT input
+- [x] 4.6 Create AvailableDaysStep component — day-of-week checkboxes with minimum 3 validation, long run day suggestion
+- [x] 4.7 Create PlanGenerationStep component — summary of choices, "Generate Plan" button, loading state
+- [x] 4.8 Wire up PlanGenerationEngine to generate plan on button click and navigate to calendar
 
 ## 5. Calendar UI — Core Views (Pheidi.Blazor/Components)
 
-- [ ] 5.1 Create CalendarLayout component with view switcher (Monthly, Weekly, Daily, Overview) and month/week navigation
-- [ ] 5.2 Create MonthlyCalendarView — grid layout with day cells showing workout type icon, short description, target distance
-- [ ] 5.3 Implement today highlight and current day visual emphasis in monthly view
-- [ ] 5.4 Create WeeklyCalendarView — 7 day cards with full workout details (type, distance, pace, warmup/cooldown)
-- [ ] 5.5 Create DailyView — full workout prescription with warmup, main set, cooldown, pace guidance, coaching notes
-- [ ] 5.6 Create PlanOverview — condensed week-by-week view with phase color coding, weekly mileage, long run distances
-- [ ] 5.7 Implement workout type color coding (Easy→green, Tempo→orange, Intervals→red, LongRun→blue, etc.)
-- [ ] 5.8 Create WorkoutDetailPanel — expandable panel/modal for clicking on workouts in any view
-- [ ] 5.9 Create PlanStateService (scoped) to hold active plan state and propagate changes to components
-- [ ] 5.10 Update site.css with calendar styles, color coding, and responsive breakpoints
+- [x] 5.1 Create CalendarLayout component with view switcher (Monthly, Weekly, Daily, Overview) and month/week navigation
+- [x] 5.2 Create MonthlyCalendarView — grid layout with day cells showing workout type icon, short description, target distance
+- [x] 5.3 Implement today highlight and current day visual emphasis in monthly view
+- [x] 5.4 Create WeeklyCalendarView — 7 day cards with full workout details (type, distance, pace, warmup/cooldown)
+- [x] 5.5 Create DailyView — full workout prescription with warmup, main set, cooldown, pace guidance, coaching notes
+- [x] 5.6 Create PlanOverview — condensed week-by-week view with phase color coding, weekly mileage, long run distances
+- [x] 5.7 Implement workout type color coding (Easy→green, Tempo→orange, Intervals→red, LongRun→blue, etc.)
+- [x] 5.8 Create WorkoutDetailPanel — expandable panel/modal for clicking on workouts in any view
+- [x] 5.9 Create PlanStateService (scoped) to hold active plan state and propagate changes to components
+- [x] 5.10 Update site.css with calendar styles, color coding, and responsive breakpoints
 
 ## 6. Schedule Flexibility (Pheidi.Common/Engines + Blazor UI)
 

@@ -1,0 +1,114 @@
+@using Pheidi.Blazor.Components.Shared
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousMonth">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <h5 class="mb-0">@displayMonth.ToString("MMMM yyyy")</h5>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="NextMonth">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+
+<div class="calendar-grid">
+    <div class="row calendar-header">
+        @foreach (var day in new[] { "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun" })
+        {
+            <div class="col text-center fw-bold small text-muted py-2">@day</div>
+        }
+    </div>
+
+    @foreach (var weekRow in GetCalendarWeeks())
+    {
+        <div class="row calendar-week">
+            @foreach (var date in weekRow)
+            {
+                var d = date;
+                var workout = GetWorkout(d);
+                var isToday = d.Date == DateTime.Today;
+                var isCurrentMonth = d.Month == displayMonth.Month;
+                var isSelected = d.Date == SelectedDate.Date;
+
+                <div class="col calendar-day @(isToday ? "today" : "") @(!isCurrentMonth ? "other-month" : "") @(isSelected ? "selected" : "")"
+                     @onclick="() => SelectDate(d)">
+                    <div class="day-number @(isToday ? "fw-bold" : "")">@d.Day</div>
+                    @if (workout != null && workout.Type != WorkoutType.Rest)
+                    {
+                        <div class="workout-badge" style="background-color: @WorkoutColors.Get(workout.Type);">
+                            <small>@WorkoutShortName(workout.Type)</small>
+                        </div>
+                        <div class="workout-distance small">@workout.TargetDistanceMiles.ToString("F1") mi</div>
+                    }
+                    else if (workout?.Type == WorkoutType.Rest)
+                    {
+                        <div class="workout-rest small text-muted">Rest</div>
+                    }
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public DateTime SelectedDate { get; set; } = DateTime.Today;
+
+    [Parameter]
+    public EventCallback<DateTime> SelectedDateChanged { get; set; }
+
+    private DateTime displayMonth;
+
+    protected override void OnInitialized()
+    {
+        displayMonth = new DateTime(SelectedDate.Year, SelectedDate.Month, 1);
+    }
+
+    private void PreviousMonth() => displayMonth = displayMonth.AddMonths(-1);
+    private void NextMonth() => displayMonth = displayMonth.AddMonths(1);
+
+    private async Task SelectDate(DateTime date)
+    {
+        SelectedDate = date;
+        await SelectedDateChanged.InvokeAsync(date);
+    }
+
+    private ScheduledWorkout? GetWorkout(DateTime date) =>
+        Plan.Weeks.SelectMany(w => w.Workouts).FirstOrDefault(w => w.Date.Date == date.Date);
+
+    private List<DateTime[]> GetCalendarWeeks()
+    {
+        var weeks = new List<DateTime[]>();
+        var firstOfMonth = new DateTime(displayMonth.Year, displayMonth.Month, 1);
+        var startDay = firstOfMonth.AddDays(-((int)firstOfMonth.DayOfWeek + 6) % 7);
+
+        for (var weekStart = startDay; weekStart.Month <= displayMonth.Month || weekStart < firstOfMonth.AddMonths(1); weekStart = weekStart.AddDays(7))
+        {
+            var week = new DateTime[7];
+            for (int d = 0; d < 7; d++)
+                week[d] = weekStart.AddDays(d);
+            weeks.Add(week);
+            if (weekStart.AddDays(7).Month > displayMonth.Month && weekStart.AddDays(7).Year >= displayMonth.Year)
+                break;
+        }
+
+        return weeks;
+    }
+
+    private static string WorkoutShortName(WorkoutType type) => type switch
+    {
+        WorkoutType.Easy => "Easy",
+        WorkoutType.Tempo => "Tempo",
+        WorkoutType.Intervals => "Int",
+        WorkoutType.LongRun => "Long",
+        WorkoutType.Recovery => "Rec",
+        WorkoutType.Fartlek => "Fart",
+        WorkoutType.HillRepeats => "Hills",
+        WorkoutType.RacePace => "Race",
+        WorkoutType.CrossTraining => "XT",
+        WorkoutType.Strength => "Str",
+        _ => ""
+    };
+}

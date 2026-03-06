@@ -1,0 +1,88 @@
+<h4>What's your race goal?</h4>
+<p class="text-muted">Select your target distance and race date.</p>
+
+<div class="mb-3">
+    <label class="form-label fw-bold">Race Distance</label>
+    <div class="d-flex gap-2 flex-wrap">
+        @foreach (var distance in Enum.GetValues<RaceDistance>())
+        {
+            var d = distance;
+            <button class="btn @(RaceGoal.Distance == d ? "btn-primary" : "btn-outline-secondary")"
+                    @onclick="() => RaceGoal.Distance = d">
+                @d.DisplayName()
+            </button>
+        }
+    </div>
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-bold">Race Date</label>
+    <input type="date" class="form-control" @bind="RaceGoal.RaceDate" />
+    @if (RaceGoal.RaceDate <= DateTime.Today)
+    {
+        <div class="form-text text-danger">Race date must be in the future.</div>
+    }
+    else
+    {
+        var weeksAway = (int)((RaceGoal.RaceDate - DateTime.Today).TotalDays / 7);
+        var (min, _) = RaceGoal.Distance.PlanWeekRange();
+        if (weeksAway < min)
+        {
+            <div class="form-text text-warning">
+                <i class="fas fa-exclamation-triangle"></i> Only @weeksAway weeks away — minimum recommended is @min weeks for @RaceGoal.Distance.DisplayName().
+            </div>
+        }
+        else
+        {
+            <div class="form-text">@weeksAway weeks away — plan will be @RaceGoal.PlanWeeks weeks.</div>
+        }
+    }
+</div>
+
+<div class="mb-3">
+    <label class="form-label fw-bold">Target Finish Time <span class="text-muted fw-normal">(optional)</span></label>
+    <div class="d-flex gap-2 align-items-center">
+        <input type="number" class="form-control" style="width: 80px" placeholder="hrs" min="0" max="12" @bind="targetHours" @bind:event="oninput" @bind:after="UpdateTargetTime" />
+        <span>:</span>
+        <input type="number" class="form-control" style="width: 80px" placeholder="min" min="0" max="59" @bind="targetMinutes" @bind:event="oninput" @bind:after="UpdateTargetTime" />
+        <span>:</span>
+        <input type="number" class="form-control" style="width: 80px" placeholder="sec" min="0" max="59" @bind="targetSeconds" @bind:event="oninput" @bind:after="UpdateTargetTime" />
+    </div>
+    <div class="form-text">Leave blank to use experience-based defaults.</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public RaceGoal RaceGoal { get; set; } = default!;
+
+    private int? targetHours;
+    private int? targetMinutes;
+    private int? targetSeconds;
+
+    protected override void OnInitialized()
+    {
+        if (RaceGoal.TargetTime.HasValue)
+        {
+            targetHours = RaceGoal.TargetTime.Value.Hours;
+            targetMinutes = RaceGoal.TargetTime.Value.Minutes;
+            targetSeconds = RaceGoal.TargetTime.Value.Seconds;
+        }
+
+        if (RaceGoal.RaceDate == default)
+        {
+            RaceGoal.RaceDate = DateTime.Today.AddMonths(4);
+        }
+    }
+
+    private void UpdateTargetTime()
+    {
+        if (targetHours.HasValue || targetMinutes.HasValue || targetSeconds.HasValue)
+        {
+            RaceGoal.TargetTime = new TimeSpan(targetHours ?? 0, targetMinutes ?? 0, targetSeconds ?? 0);
+        }
+        else
+        {
+            RaceGoal.TargetTime = null;
+        }
+    }
+}

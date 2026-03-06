@@ -1,9 +1,14 @@
 using Pheidi.Blazor.Components;
+using Pheidi.Blazor.Services;
+using Pheidi.Common.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddScoped<PlanStateService>();
+builder.Services.AddScoped<PaceCalculator>();
 
 var app = builder.Build();
 

@@ -1,0 +1,123 @@
+@using Pheidi.Blazor.Components.Shared
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousWeek">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <h5 class="mb-0">Week of @weekStart.ToString("MMM d") — @weekStart.AddDays(6).ToString("MMM d, yyyy")</h5>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="NextWeek">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+
+@{
+    var trainingWeek = GetTrainingWeek();
+}
+
+@if (trainingWeek != null)
+{
+    <div class="mb-2">
+        <span class="badge" style="background-color: @PhaseColor(trainingWeek.Phase); color: #fff;">
+            @trainingWeek.Phase Phase
+        </span>
+        <span class="text-muted ms-2">Week @trainingWeek.WeekNumber — @trainingWeek.TotalPlannedDistance.ToString("F1") mi total</span>
+    </div>
+}
+
+<div class="row g-3">
+    @for (int d = 0; d < 7; d++)
+    {
+        var date = weekStart.AddDays(d);
+        var workout = GetWorkout(date);
+        var isToday = date.Date == DateTime.Today;
+
+        <div class="col-12">
+            <div class="card @(isToday ? "border-primary" : "")">
+                <div class="card-body p-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1 @(isToday ? "text-primary fw-bold" : "")">
+                                @date.ToString("dddd, MMM d")
+                                @if (isToday)
+                                {
+                                    <span class="badge bg-primary ms-1">Today</span>
+                                }
+                            </h6>
+                            @if (workout != null && workout.Type != WorkoutType.Rest)
+                            {
+                                <span class="badge me-2" style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type);">
+                                    @workout.Type
+                                </span>
+                                <span>@workout.Description</span>
+
+                                @if (workout.PaceZone != null)
+                                {
+                                    <div class="small text-muted mt-1">
+                                        <i class="fas fa-heartbeat"></i> @workout.PaceZone.RpeDescription
+                                        (RPE @workout.PaceZone.RpeMin-@workout.PaceZone.RpeMax)
+                                    </div>
+                                }
+                                @if (workout.WarmUpDuration.HasValue)
+                                {
+                                    <div class="small text-muted">
+                                        <i class="fas fa-fire"></i> Warm up: @((int)workout.WarmUpDuration.Value.TotalMinutes) min
+                                        &nbsp;|&nbsp;
+                                        <i class="fas fa-snowflake"></i> Cool down: @((int)(workout.CoolDownDuration?.TotalMinutes ?? 0)) min
+                                    </div>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">Rest Day</span>
+                            }
+                        </div>
+                        @if (workout != null && workout.Type != WorkoutType.Rest)
+                        {
+                            <div class="text-end">
+                                <span class="fs-4 fw-bold">@workout.TargetDistanceMiles.ToString("F1")</span>
+                                <small class="text-muted d-block">miles</small>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public DateTime CurrentDate { get; set; } = DateTime.Today;
+
+    private DateTime weekStart;
+
+    protected override void OnInitialized() => CalculateWeekStart();
+    protected override void OnParametersSet() => CalculateWeekStart();
+
+    private void CalculateWeekStart()
+    {
+        var daysSinceMonday = ((int)CurrentDate.DayOfWeek + 6) % 7;
+        weekStart = CurrentDate.AddDays(-daysSinceMonday);
+    }
+
+    private void PreviousWeek() => weekStart = weekStart.AddDays(-7);
+    private void NextWeek() => weekStart = weekStart.AddDays(7);
+
+    private ScheduledWorkout? GetWorkout(DateTime date) =>
+        Plan.Weeks.SelectMany(w => w.Workouts).FirstOrDefault(w => w.Date.Date == date.Date);
+
+    private TrainingWeek? GetTrainingWeek() =>
+        Plan.Weeks.FirstOrDefault(w => w.Workouts.Any(wo => wo.Date.Date >= weekStart && wo.Date.Date <= weekStart.AddDays(6)));
+
+    private static string PhaseColor(TrainingPhase phase) => phase switch
+    {
+        TrainingPhase.Base => "#4CAF50",
+        TrainingPhase.Build => "#FF9800",
+        TrainingPhase.Peak => "#F44336",
+        TrainingPhase.Taper => "#2196F3",
+        _ => "#9E9E9E"
+    };
+}

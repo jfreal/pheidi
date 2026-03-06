@@ -1,0 +1,114 @@
+@using Pheidi.Blazor.Components.Shared
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <button class="btn btn-sm btn-outline-secondary" @onclick="OnPreviousDay">
+        <i class="fas fa-chevron-left"></i>
+    </button>
+    <h5 class="mb-0">
+        @Date.ToString("dddd, MMMM d, yyyy")
+        @if (Date.Date == DateTime.Today)
+        {
+            <span class="badge bg-primary ms-2">Today</span>
+        }
+    </h5>
+    <button class="btn btn-sm btn-outline-secondary" @onclick="OnNextDay">
+        <i class="fas fa-chevron-right"></i>
+    </button>
+</div>
+
+@{
+    var workout = GetWorkout();
+}
+
+@if (workout == null)
+{
+    <div class="text-center py-5 text-muted">
+        <i class="far fa-calendar fa-3x mb-3"></i>
+        <p>No workout scheduled for this day.</p>
+    </div>
+}
+else if (workout.Type == WorkoutType.Rest)
+{
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-couch fa-3x mb-3 text-muted"></i>
+            <h4>Rest Day</h4>
+            <p class="text-muted">Recovery is training too. Consider light stretching or foam rolling.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center"
+             style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type);">
+            <h5 class="mb-0">@workout.Type</h5>
+            <span class="fs-4 fw-bold">@workout.TargetDistanceMiles.ToString("F1") mi</span>
+        </div>
+        <div class="card-body">
+            @if (workout.WarmUpDuration.HasValue)
+            {
+                <div class="workout-segment mb-3 p-3 bg-light rounded">
+                    <h6><i class="fas fa-fire text-warning"></i> Warm-Up</h6>
+                    <p class="mb-0">@((int)workout.WarmUpDuration.Value.TotalMinutes) minutes easy jog</p>
+                </div>
+            }
+
+            <div class="workout-segment mb-3 p-3 border rounded">
+                <h6><i class="fas fa-running text-primary"></i> Main Set</h6>
+                <p class="mb-1"><strong>@workout.Description</strong></p>
+                @if (workout.PaceZone != null)
+                {
+                    <div class="mt-2">
+                        <span class="badge bg-secondary me-1">@workout.PaceZone.Zone Zone</span>
+                        <span>@workout.PaceZone.RpeDescription (RPE @workout.PaceZone.RpeMin-@workout.PaceZone.RpeMax)</span>
+                    </div>
+                }
+            </div>
+
+            @if (workout.CoolDownDuration.HasValue)
+            {
+                <div class="workout-segment mb-3 p-3 bg-light rounded">
+                    <h6><i class="fas fa-snowflake text-info"></i> Cool-Down</h6>
+                    <p class="mb-0">@((int)workout.CoolDownDuration.Value.TotalMinutes) minutes easy jog / walk</p>
+                </div>
+            }
+
+            <hr />
+            <div class="text-muted small">
+                <i class="fas fa-lightbulb"></i>
+                @GetCoachingNote(workout.Type)
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public DateTime Date { get; set; } = DateTime.Today;
+
+    [Parameter]
+    public EventCallback OnPreviousDay { get; set; }
+
+    [Parameter]
+    public EventCallback OnNextDay { get; set; }
+
+    private ScheduledWorkout? GetWorkout() =>
+        Plan.Weeks.SelectMany(w => w.Workouts).FirstOrDefault(w => w.Date.Date == Date.Date);
+
+    private static string GetCoachingNote(WorkoutType type) => type switch
+    {
+        WorkoutType.Easy => "Keep it conversational. If you can't chat comfortably, slow down.",
+        WorkoutType.Tempo => "Find a pace you can sustain for the full distance. It should feel comfortably hard.",
+        WorkoutType.Intervals => "Push hard during the work intervals, recover fully between reps.",
+        WorkoutType.LongRun => "Start slow and settle into a comfortable rhythm. Stay hydrated!",
+        WorkoutType.Recovery => "Take it very easy. This run helps your body recover from harder efforts.",
+        WorkoutType.HillRepeats => "Run strong uphill, easy jog back down. Focus on form, not speed.",
+        WorkoutType.RacePace => "Practice your target race pace. This is what race day should feel like.",
+        WorkoutType.Fartlek => "Play with pace — alternate between easy and hard efforts by feel.",
+        _ => "Listen to your body and enjoy the run!"
+    };
+}

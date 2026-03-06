@@ -1,0 +1,61 @@
+@page "/calendar"
+@rendermode InteractiveServer
+@inject PlanStateService PlanState
+@inject NavigationManager Navigation
+
+<PageTitle>Pheidi - Training Calendar</PageTitle>
+
+@if (!PlanState.HasActivePlan)
+{
+    <div class="text-center mt-5">
+        <h4>No active training plan</h4>
+        <p class="text-muted">Set up your training plan to see your calendar.</p>
+        <a href="/setup" class="btn btn-primary"><i class="fas fa-plus me-2"></i>Create a Plan</a>
+    </div>
+}
+else
+{
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+        <h4 class="mb-0">
+            <i class="far fa-calendar-alt"></i>
+            @PlanState.ActivePlan!.RaceGoal.Distance.DisplayName() Training Plan
+        </h4>
+
+        <!-- View switcher -->
+        <div class="btn-group" role="group">
+            @foreach (var view in Enum.GetValues<CalendarView>())
+            {
+                var v = view;
+                <button class="btn btn-sm @(currentView == v ? "btn-primary" : "btn-outline-secondary")"
+                        @onclick="() => currentView = v">
+                    @v
+                </button>
+            }
+        </div>
+    </div>
+
+    @switch (currentView)
+    {
+        case CalendarView.Monthly:
+            <MonthlyCalendarView Plan="PlanState.ActivePlan" @bind-SelectedDate="selectedDate" />
+            break;
+        case CalendarView.Weekly:
+            <WeeklyCalendarView Plan="PlanState.ActivePlan" CurrentDate="selectedDate" />
+            break;
+        case CalendarView.Daily:
+            <DailyView Plan="PlanState.ActivePlan" Date="selectedDate"
+                       OnPreviousDay="() => selectedDate = selectedDate.AddDays(-1)"
+                       OnNextDay="() => selectedDate = selectedDate.AddDays(1)" />
+            break;
+        case CalendarView.Overview:
+            <PlanOverviewView Plan="PlanState.ActivePlan" />
+            break;
+    }
+}
+
+@code {
+    private CalendarView currentView = CalendarView.Monthly;
+    private DateTime selectedDate = DateTime.Today;
+
+    public enum CalendarView { Monthly, Weekly, Daily, Overview }
+}

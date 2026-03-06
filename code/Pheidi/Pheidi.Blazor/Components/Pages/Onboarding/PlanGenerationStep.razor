@@ -1,0 +1,66 @@
+<h4>Ready to generate your plan!</h4>
+<p class="text-muted">Review your choices below, then generate your personalized training plan.</p>
+
+<table class="table">
+    <tbody>
+        <tr>
+            <td class="fw-bold">Race</td>
+            <td>@RaceGoal.Distance.DisplayName()</td>
+        </tr>
+        <tr>
+            <td class="fw-bold">Race Date</td>
+            <td>@RaceGoal.RaceDate.ToString("MMMM d, yyyy")</td>
+        </tr>
+        @if (RaceGoal.TargetTime.HasValue)
+        {
+            <tr>
+                <td class="fw-bold">Target Time</td>
+                <td>@RaceGoal.TargetTime.Value.ToString(@"h\:mm\:ss")</td>
+            </tr>
+        }
+        <tr>
+            <td class="fw-bold">Plan Duration</td>
+            <td>@RaceGoal.PlanWeeks weeks</td>
+        </tr>
+        <tr>
+            <td class="fw-bold">Experience</td>
+            <td>@Profile.ExperienceLevel — @Profile.ExperienceLevel.Description()</td>
+        </tr>
+        <tr>
+            <td class="fw-bold">Pace Guidance</td>
+            <td>@(Profile.PacePreference == PacePreference.VDOT ? "Pace-based (VDOT)" : "Effort-based (RPE)")</td>
+        </tr>
+        <tr>
+            <td class="fw-bold">Training Days</td>
+            <td>@string.Join(", ", Profile.AvailableDays.Select(d => d.ToString()[..3]))</td>
+        </tr>
+    </tbody>
+</table>
+
+<div class="text-center mt-4">
+    <button class="btn btn-primary btn-lg" @onclick="OnGenerate" disabled="@generating">
+        @if (generating)
+        {
+            <span class="spinner-border spinner-border-sm me-2"></span>
+            <text>Generating...</text>
+        }
+        else
+        {
+            <i class="fas fa-magic me-2"></i>
+            <text>Generate My Plan</text>
+        }
+    </button>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public RaceGoal RaceGoal { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public UserProfile Profile { get; set; } = default!;
+
+    [Parameter, EditorRequired]
+    public EventCallback OnGenerate { get; set; }
+
+    private bool generating = false;
+}
