@@ -1,9 +1,21 @@
 @page "/setup"
 @rendermode InteractiveServer
+@using Pheidi.Blazor.Services
 @inject PlanStateService PlanState
+@inject AuthStateService AuthState
 @inject NavigationManager Navigation
 
 <PageTitle>Pheidi - Setup Your Plan</PageTitle>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <div class="text-center mt-5">
+        <h4>Sign in to create a plan</h4>
+        <p class="text-muted">You need to be signed in to set up a training plan.</p>
+        <a href="/signin" class="btn btn-primary"><i class="fas fa-user me-2"></i>Sign In</a>
+    </div>
+    return;
+}
 
 <div class="row justify-content-center mt-4">
     <div class="col-lg-8 col-md-10">

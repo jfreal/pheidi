@@ -32,6 +32,8 @@ public class AuthStateService
             if (result.Success)
             {
                 CurrentUser = await _db.Users.FindAsync(result.Value);
+                if (CurrentUser != null)
+                    OnAuthStateChanged?.Invoke();
             }
         }
         catch

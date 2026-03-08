@@ -1,6 +1,9 @@
+@implements IDisposable
 @using Pheidi.Blazor.Services
 @inject AuthStateService AuthState
+@inject PlanStateService PlanState
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
     <div class="container">
@@ -16,20 +19,37 @@
                         <i class="fas fa-home fa-fw me-1"></i>Home
                     </NavLink>
                 </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="setup">
-                        <i class="fas fa-clipboard-list fa-fw me-1"></i>New Plan
-                    </NavLink>
-                </li>
-                <li class="nav-item">
-                    <NavLink class="nav-link" href="calendar">
-                        <i class="fas fa-calendar-alt fa-fw me-1"></i>Calendar
-                    </NavLink>
-                </li>
+                @if (AuthState.IsAuthenticated)
+                {
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="setup">
+                            <i class="fas fa-clipboard-list fa-fw me-1"></i>New Plan
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="calendar">
+                            <i class="fas fa-calendar-alt fa-fw me-1"></i>Calendar
+                        </NavLink>
+                    </li>
+                }
             </ul>
             <ul class="navbar-nav">
                 @if (AuthState.IsAuthenticated)
                 {
+                    @if (PlanState.HasActivePlan)
+                    {
+                        <li class="nav-item">
+                            <button class="btn btn-sm btn-outline-info my-1 me-2 position-relative" @onclick="CopyShareLink" title="Copy share link">
+                                <i class="fas fa-share-alt me-1"></i>Share
+                                @if (showCopied)
+                                {
+                                    <span class="position-absolute top-100 start-50 translate-middle-x badge bg-success mt-1" style="white-space: nowrap; z-index: 1050;">
+                                        Copied!
+                                    </span>
+                                }
+                            </button>
+                        </li>
+                    }
                     <li class="nav-item">
                         <span class="nav-link text-muted">@AuthState.CurrentUser?.Email</span>
                     </li>
@@ -52,17 +72,47 @@
 
 @code {
     private bool collapseNavMenu = true;
+    private bool showCopied;
 
     private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
+
+    protected override void OnInitialized()
+    {
+        AuthState.OnAuthStateChanged += HandleAuthStateChanged;
+    }
+
+    private void HandleAuthStateChanged()
+    {
+        InvokeAsync(StateHasChanged);
+    }
 
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
     }
 
+    private async Task CopyShareLink()
+    {
+        if (PlanState.HasActivePlan)
+        {
+            var baseUrl = Navigation.BaseUri.TrimEnd('/');
+            var shareUrl = $"{baseUrl}/api/shared/plan-{PlanState.ActivePlan!.Id}";
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
+            showCopied = true;
+            StateHasChanged();
+            await Task.Delay(2000);
+            showCopied = false;
+        }
+    }
+
     private async Task SignOut()
     {
         await AuthState.SignOutAsync();
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnAuthStateChanged -= HandleAuthStateChanged;
     }
 }

@@ -8,20 +8,31 @@ public class OtpAuthService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<OtpAuthService> _logger;
+    private readonly IHostEnvironment _env;
 
     private const int CodeLength = 6;
     private const int ExpiryMinutes = 10;
     private const int MaxAttemptsPerHour = 5;
+    private const string DebugPhone = "8607782522";
+    private const string DebugCode = "999999";
 
-    public OtpAuthService(AppDbContext db, ILogger<OtpAuthService> logger)
+    public OtpAuthService(AppDbContext db, ILogger<OtpAuthService> logger, IHostEnvironment env)
     {
         _db = db;
         _logger = logger;
+        _env = env;
     }
 
     public async Task<bool> SendCodeAsync(string email)
     {
         email = email.Trim().ToLowerInvariant();
+
+        // Debug bypass: skip OTP generation for test phone
+        if (_env.IsDevelopment() && email == DebugPhone)
+        {
+            _logger.LogInformation("Debug bypass: skipping OTP for {Phone}", DebugPhone);
+            return true;
+        }
 
         // Rate limiting: max 5 codes per email per hour
         var recentCount = await _db.OtpCodes
@@ -54,6 +65,20 @@ public class OtpAuthService
     {
         email = email.Trim().ToLowerInvariant();
         code = code.Trim();
+
+        // Debug bypass: code 999999 with test phone skips OTP validation
+        if (_env.IsDevelopment() && email == DebugPhone && code == DebugCode)
+        {
+            _logger.LogInformation("Debug bypass: auto-login for {Phone}", DebugPhone);
+            var debugUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            if (debugUser == null)
+            {
+                debugUser = new AppUser { Email = email };
+                _db.Users.Add(debugUser);
+                await _db.SaveChangesAsync();
+            }
+            return debugUser;
+        }
 
         var otpCode = await _db.OtpCodes
             .Where(c => c.Email == email && c.Code == code && !c.IsUsed && c.ExpiresAt > DateTime.UtcNow)

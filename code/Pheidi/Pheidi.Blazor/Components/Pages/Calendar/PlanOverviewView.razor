@@ -1,17 +1,118 @@
 @using Pheidi.Blazor.Components.Shared
 
-<div class="mb-3">
-    <div class="d-flex gap-3 mb-2">
-        <span><span class="badge" style="background-color: #4CAF50;">&nbsp;</span> Base</span>
-        <span><span class="badge" style="background-color: #FF9800;">&nbsp;</span> Build</span>
-        <span><span class="badge" style="background-color: #F44336;">&nbsp;</span> Peak</span>
-        <span><span class="badge" style="background-color: #2196F3;">&nbsp;</span> Taper</span>
+<div class="d-flex gap-3 mb-3 flex-wrap">
+    <span><span class="badge" style="background-color: #4CAF50;">&nbsp;</span> Base</span>
+    <span><span class="badge" style="background-color: #FF9800;">&nbsp;</span> Build</span>
+    <span><span class="badge" style="background-color: #F44336;">&nbsp;</span> Peak</span>
+    <span><span class="badge" style="background-color: #2196F3;">&nbsp;</span> Taper</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <div class="fs-4 fw-bold">@Plan.TotalWeeks</div>
+                <small class="text-muted">Weeks</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <div class="fs-4 fw-bold">@Plan.TotalPlannedMiles.ToString("F0")</div>
+                <small class="text-muted">Total Miles</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <div class="fs-4 fw-bold">@Plan.PeakWeeklyMiles.ToString("F0")</div>
+                <small class="text-muted">Peak Week</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card text-center">
+            <div class="card-body py-2">
+                <div class="fs-4 fw-bold">@Plan.LongestRun.ToString("F0")</div>
+                <small class="text-muted">Longest Run</small>
+            </div>
+        </div>
     </div>
 </div>
 
 <div class="table-responsive">
+    <table class="table table-sm table-bordered align-middle" style="font-size: 0.85rem;">
+        <thead class="table-light">
+            <tr>
+                <th style="width: 50px;">Wk</th>
+                <th style="width: 60px;">Phase</th>
+                @foreach (var day in weekDays)
+                {
+                    <th class="text-center">@day.ToString()[..3]</th>
+                }
+                <th class="text-end" style="width: 70px;">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var week in Plan.Weeks)
+            {
+                var isCurrentWeek = week == Plan.CurrentWeek;
+                <tr class="@(isCurrentWeek ? "table-warning" : "")"
+                    style="border-left: 4px solid @PhaseColor(week.Phase);">
+                    <td class="fw-bold">
+                        @week.WeekNumber
+                        @if (isCurrentWeek)
+                        {
+                            <i class="fas fa-caret-left text-primary"></i>
+                        }
+                    </td>
+                    <td>
+                        <span class="badge" style="background-color: @PhaseColor(week.Phase); color: #fff; font-size: 0.7rem;">
+                            @week.Phase.ToString()[..3]
+                        </span>
+                    </td>
+                    @foreach (var day in weekDays)
+                    {
+                        var workout = week.Workouts.FirstOrDefault(w => w.Date.DayOfWeek == day);
+                        <td class="text-center p-1">
+                            @if (workout != null && workout.Type != WorkoutType.Rest)
+                            {
+                                <div>
+                                    <span class="badge d-block mb-0" style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type); font-size: 0.7rem;">
+                                        @ShortType(workout.Type)
+                                    </span>
+                                    @if (workout.TargetDistanceMiles > 0)
+                                    {
+                                        <small class="text-muted">@workout.TargetDistanceMiles.ToString("F1")</small>
+                                    }
+                                </div>
+                            }
+                            else if (workout != null)
+                            {
+                                <small class="text-muted">Rest</small>
+                            }
+                        </td>
+                    }
+                    <td class="text-end fw-bold">@week.TotalPlannedDistance.ToString("F1")</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="table-light fw-bold">
+                <td colspan="2">Total</td>
+                <td colspan="7"></td>
+                <td class="text-end">@Plan.TotalPlannedMiles.ToString("F1")</td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<h5 class="mt-4 mb-3">Weekly Summary</h5>
+<div class="table-responsive">
     <table class="table table-sm table-hover">
-        <thead>
+        <thead class="table-light">
             <tr>
                 <th>Week</th>
                 <th>Phase</th>
@@ -27,13 +128,7 @@
                 var isCurrentWeek = week == Plan.CurrentWeek;
                 <tr class="@(isCurrentWeek ? "table-active fw-bold" : "")"
                     style="border-left: 4px solid @PhaseColor(week.Phase);">
-                    <td>
-                        @week.WeekNumber
-                        @if (isCurrentWeek)
-                        {
-                            <i class="fas fa-arrow-left text-primary ms-1"></i>
-                        }
-                    </td>
+                    <td>@week.WeekNumber</td>
                     <td>
                         <span class="badge" style="background-color: @PhaseColor(week.Phase); color: #fff;">
                             @week.Phase
@@ -57,9 +152,7 @@
                     </td>
                     <td>
                         @{
-                            var keyWorkout = week.Workouts
-                                .Where(w => w.IsQualityWorkout)
-                                .FirstOrDefault();
+                            var keyWorkout = week.Workouts.FirstOrDefault(w => w.IsQualityWorkout);
                         }
                         @if (keyWorkout != null)
                         {
@@ -86,44 +179,15 @@
     </table>
 </div>
 
-<div class="row g-3 mt-2">
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="fs-3 fw-bold">@Plan.TotalWeeks</div>
-                <small class="text-muted">Total Weeks</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="fs-3 fw-bold">@Plan.TotalPlannedMiles.ToString("F0")</div>
-                <small class="text-muted">Total Miles</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="fs-3 fw-bold">@Plan.PeakWeeklyMiles.ToString("F0")</div>
-                <small class="text-muted">Peak Week Miles</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card text-center">
-            <div class="card-body">
-                <div class="fs-3 fw-bold">@Plan.LongestRun.ToString("F0")</div>
-                <small class="text-muted">Longest Run (mi)</small>
-            </div>
-        </div>
-    </div>
-</div>
-
 @code {
     [Parameter, EditorRequired]
     public NewTrainingPlan Plan { get; set; } = default!;
+
+    private static readonly DayOfWeek[] weekDays =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
 
     private static string PhaseColor(TrainingPhase phase) => phase switch
     {
@@ -132,5 +196,20 @@
         TrainingPhase.Peak => "#F44336",
         TrainingPhase.Taper => "#2196F3",
         _ => "#9E9E9E"
+    };
+
+    private static string ShortType(WorkoutType type) => type switch
+    {
+        WorkoutType.Easy => "Easy",
+        WorkoutType.Tempo => "Tempo",
+        WorkoutType.Intervals => "Int",
+        WorkoutType.LongRun => "Long",
+        WorkoutType.Recovery => "Rec",
+        WorkoutType.Fartlek => "Fart",
+        WorkoutType.HillRepeats => "Hills",
+        WorkoutType.RacePace => "Race",
+        WorkoutType.CrossTraining => "XT",
+        WorkoutType.Strength => "Str",
+        _ => type.ToString()
     };
 }
