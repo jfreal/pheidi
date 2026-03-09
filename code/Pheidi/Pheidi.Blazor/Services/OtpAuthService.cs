@@ -1,16 +1,16 @@
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using Pheidi.Blazor.Data;
 using Pheidi.Common.Models;
 
 namespace Pheidi.Blazor.Services;
 
-public class OtpAuthService
+public partial class OtpAuthService
 {
     private readonly AppDbContext _db;
     private readonly ILogger<OtpAuthService> _logger;
     private readonly IHostEnvironment _env;
 
-    private const int CodeLength = 6;
     private const int ExpiryMinutes = 10;
     private const int MaxAttemptsPerHour = 5;
     private const string DebugPhone = "8607782522";
@@ -23,31 +23,43 @@ public class OtpAuthService
         _env = env;
     }
 
-    public async Task<bool> SendCodeAsync(string email)
+    public async Task<bool> SendCodeAsync(string identifier)
     {
-        email = email.Trim().ToLowerInvariant();
+        identifier = NormalizeIdentifier(identifier);
+        if (string.IsNullOrEmpty(identifier))
+            return false;
 
         // Debug bypass: skip OTP generation for test phone
-        if (_env.IsDevelopment() && email == DebugPhone)
+        if (_env.IsDevelopment() && identifier == DebugPhone)
         {
             _logger.LogInformation("Debug bypass: skipping OTP for {Phone}", DebugPhone);
             return true;
         }
 
-        // Rate limiting: max 5 codes per email per hour
+        // Clean up expired OTP codes opportunistically
+        var cutoff = DateTime.UtcNow.AddMinutes(-ExpiryMinutes * 2);
+        var expired = await _db.OtpCodes
+            .Where(c => c.ExpiresAt < cutoff)
+            .ToListAsync();
+        if (expired.Count > 0)
+        {
+            _db.OtpCodes.RemoveRange(expired);
+        }
+
+        // Rate limiting: max 5 codes per identifier per hour
         var recentCount = await _db.OtpCodes
-            .CountAsync(c => c.Email == email && c.CreatedAt > DateTime.UtcNow.AddHours(-1));
+            .CountAsync(c => c.Email == identifier && c.CreatedAt > DateTime.UtcNow.AddHours(-1));
 
         if (recentCount >= MaxAttemptsPerHour)
         {
-            _logger.LogWarning("Rate limit exceeded for {Email}", email);
+            _logger.LogWarning("Rate limit exceeded for {Identifier}", identifier);
             return false;
         }
 
         var code = GenerateCode();
         var otpCode = new OtpCode
         {
-            Email = email,
+            Email = identifier,
             Code = code,
             ExpiresAt = DateTime.UtcNow.AddMinutes(ExpiryMinutes)
         };
@@ -55,25 +67,25 @@ public class OtpAuthService
         _db.OtpCodes.Add(otpCode);
         await _db.SaveChangesAsync();
 
-        // Dev mode: log code to console instead of sending email
-        _logger.LogInformation("OTP code for {Email}: {Code}", email, code);
+        // Dev mode: log code to console instead of sending email/SMS
+        _logger.LogInformation("OTP code for {Identifier}: {Code}", identifier, code);
 
         return true;
     }
 
-    public async Task<AppUser?> VerifyCodeAsync(string email, string code)
+    public async Task<AppUser?> VerifyCodeAsync(string identifier, string code)
     {
-        email = email.Trim().ToLowerInvariant();
+        identifier = NormalizeIdentifier(identifier);
         code = code.Trim();
 
         // Debug bypass: code 999999 with test phone skips OTP validation
-        if (_env.IsDevelopment() && email == DebugPhone && code == DebugCode)
+        if (_env.IsDevelopment() && identifier == DebugPhone && code == DebugCode)
         {
             _logger.LogInformation("Debug bypass: auto-login for {Phone}", DebugPhone);
-            var debugUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+            var debugUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
             if (debugUser == null)
             {
-                debugUser = new AppUser { Email = email };
+                debugUser = new AppUser { Email = identifier };
                 _db.Users.Add(debugUser);
                 await _db.SaveChangesAsync();
             }
@@ -81,7 +93,7 @@ public class OtpAuthService
         }
 
         var otpCode = await _db.OtpCodes
-            .Where(c => c.Email == email && c.Code == code && !c.IsUsed && c.ExpiresAt > DateTime.UtcNow)
+            .Where(c => c.Email == identifier && c.Code == code && !c.IsUsed && c.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync();
 
@@ -91,10 +103,10 @@ public class OtpAuthService
         otpCode.IsUsed = true;
 
         // Find or create user
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == email);
+        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
         if (user == null)
         {
-            user = new AppUser { Email = email };
+            user = new AppUser { Email = identifier };
             _db.Users.Add(user);
         }
 
@@ -102,8 +114,37 @@ public class OtpAuthService
         return user;
     }
 
+    /// <summary>
+    /// Validates that input looks like an email or phone number.
+    /// </summary>
+    public static bool IsValidIdentifier(string input)
+    {
+        input = input.Trim();
+        return IsPhoneNumber(input) || EmailRegex().IsMatch(input);
+    }
+
+    private static string NormalizeIdentifier(string input)
+    {
+        input = input.Trim();
+        if (IsPhoneNumber(input))
+            return DigitsOnly().Replace(input, "");
+        return input.ToLowerInvariant();
+    }
+
+    private static bool IsPhoneNumber(string input)
+    {
+        var digits = DigitsOnly().Replace(input, "");
+        return digits.Length >= 10 && digits.Length <= 15 && digits.All(char.IsDigit);
+    }
+
     private static string GenerateCode()
     {
-        return Random.Shared.Next(0, 999999).ToString("D6");
+        return Random.Shared.Next(100000, 999999).ToString("D6");
     }
+
+    [GeneratedRegex(@"[^\d]")]
+    private static partial Regex DigitsOnly();
+
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
+    private static partial Regex EmailRegex();
 }

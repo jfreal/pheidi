@@ -5,57 +5,70 @@
 @inject NavigationManager Navigation
 @rendermode InteractiveServer
 
-<div class="container" style="max-width: 400px; margin-top: 80px;">
-    <h2 class="text-center mb-4">Sign In</h2>
+@if (AuthState.IsAuthenticated)
+{
+    <div class="container text-center" style="margin-top: 80px;">
+        <h4>You're already signed in</h4>
+        <p class="text-muted">Signed in as <strong>@AuthState.CurrentUser?.Email</strong></p>
+        <a href="/calendar" class="btn btn-primary me-2"><i class="fas fa-calendar-alt me-1"></i>Calendar</a>
+        <a href="/setup" class="btn btn-outline-primary"><i class="fas fa-plus me-1"></i>New Plan</a>
+    </div>
+}
+else
+{
+    <div class="container" style="max-width: 400px; margin-top: 80px;">
+        <h2 class="text-center mb-4">Sign In</h2>
 
-    @if (!codeSent)
-    {
-        <div class="card p-4">
-            <div class="mb-3">
-                <label class="form-label">Email address</label>
-                <input type="email" class="form-control" @bind="email" @bind:event="oninput"
-                       placeholder="you@example.com" />
-            </div>
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-warning py-2">@errorMessage</div>
-            }
-            <button class="btn btn-primary w-100" @onclick="SendCode" disabled="@(sending || string.IsNullOrWhiteSpace(email))">
-                @if (sending)
+        @if (!codeSent)
+        {
+            <div class="card p-4">
+                <div class="mb-3">
+                    <label class="form-label">Email or phone number</label>
+                    <input type="text" class="form-control" @bind="identifier" @bind:event="oninput"
+                           placeholder="you@example.com or (555) 123-4567" />
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
+                    <div class="alert alert-warning py-2">@errorMessage</div>
                 }
-                Send Code
-            </button>
-        </div>
-    }
-    else
-    {
-        <div class="card p-4">
-            <p class="text-muted text-center">We sent a 6-digit code to <strong>@email</strong></p>
-            <div class="mb-3">
-                <label class="form-label">Enter code</label>
-                <input type="text" class="form-control text-center" @bind="code" @bind:event="oninput"
-                       maxlength="6" placeholder="000000" style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                <button class="btn btn-primary w-100" @onclick="SendCode"
+                        disabled="@(sending || string.IsNullOrWhiteSpace(identifier))">
+                    @if (sending)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Send Code
+                </button>
             </div>
-            @if (!string.IsNullOrEmpty(errorMessage))
-            {
-                <div class="alert alert-warning py-2">@errorMessage</div>
-            }
-            <button class="btn btn-primary w-100 mb-2" @onclick="VerifyCode" disabled="@(verifying || code?.Length != 6)">
-                @if (verifying)
+        }
+        else
+        {
+            <div class="card p-4">
+                <p class="text-muted text-center">We sent a 6-digit code to <strong>@identifier</strong></p>
+                <div class="mb-3">
+                    <label class="form-label">Enter code</label>
+                    <input type="text" class="form-control text-center" @bind="code" @bind:event="oninput"
+                           maxlength="6" placeholder="000000" style="font-size: 1.5rem; letter-spacing: 0.5rem;" />
+                </div>
+                @if (!string.IsNullOrEmpty(errorMessage))
                 {
-                    <span class="spinner-border spinner-border-sm me-1"></span>
+                    <div class="alert alert-warning py-2">@errorMessage</div>
                 }
-                Verify
-            </button>
-            <button class="btn btn-link w-100" @onclick="Reset">Use a different email</button>
-        </div>
-    }
-</div>
+                <button class="btn btn-primary w-100 mb-2" @onclick="VerifyCode" disabled="@(verifying || code?.Length != 6)">
+                    @if (verifying)
+                    {
+                        <span class="spinner-border spinner-border-sm me-1"></span>
+                    }
+                    Verify
+                </button>
+                <button class="btn btn-link w-100" @onclick="Reset">Use a different email or phone</button>
+            </div>
+        }
+    </div>
+}
 
 @code {
-    private string email = string.Empty;
+    private string identifier = string.Empty;
     private string code = string.Empty;
     private string? errorMessage;
     private bool codeSent;
@@ -65,9 +78,16 @@
     private async Task SendCode()
     {
         errorMessage = null;
+
+        if (!OtpAuthService.IsValidIdentifier(identifier))
+        {
+            errorMessage = "Please enter a valid email address or phone number.";
+            return;
+        }
+
         sending = true;
 
-        var success = await AuthService.SendCodeAsync(email);
+        var success = await AuthService.SendCodeAsync(identifier);
         if (success)
         {
             codeSent = true;
@@ -85,11 +105,11 @@
         errorMessage = null;
         verifying = true;
 
-        var user = await AuthService.VerifyCodeAsync(email, code);
+        var user = await AuthService.VerifyCodeAsync(identifier, code);
         if (user != null)
         {
             await AuthState.SignInAsync(user);
-            Navigation.NavigateTo("/setup");
+            Navigation.NavigateTo("/calendar");
         }
         else
         {

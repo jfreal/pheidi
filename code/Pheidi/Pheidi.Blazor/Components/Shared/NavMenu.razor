@@ -96,7 +96,7 @@
         if (PlanState.HasActivePlan)
         {
             var baseUrl = Navigation.BaseUri.TrimEnd('/');
-            var shareUrl = $"{baseUrl}/api/shared/plan-{PlanState.ActivePlan!.Id}";
+            var shareUrl = $"{baseUrl}/api/shared/{PlanState.ActivePlan!.ShareToken}";
             await JS.InvokeVoidAsync("navigator.clipboard.writeText", shareUrl);
             showCopied = true;
             StateHasChanged();

@@ -6,23 +6,23 @@ public static class WorkoutColors
 {
     public static string Get(WorkoutType type) => type switch
     {
-        WorkoutType.Easy => "#4CAF50",        // green
-        WorkoutType.Tempo => "#FF9800",       // orange
-        WorkoutType.Intervals => "#F44336",   // red
-        WorkoutType.LongRun => "#2196F3",     // blue
-        WorkoutType.Recovery => "#81C784",    // light green
-        WorkoutType.Fartlek => "#FF5722",     // deep orange
-        WorkoutType.HillRepeats => "#795548", // brown
-        WorkoutType.RacePace => "#FFC107",    // gold
-        WorkoutType.CrossTraining => "#9C27B0", // purple
-        WorkoutType.Strength => "#607D8B",    // blue grey
-        WorkoutType.Rest => "#9E9E9E",        // grey
-        _ => "#9E9E9E"
+        WorkoutType.Easy => "#81C784",        // soft green
+        WorkoutType.Tempo => "#FFB74D",       // soft orange
+        WorkoutType.Intervals => "#E57373",   // soft red
+        WorkoutType.LongRun => "#64B5F6",     // soft blue
+        WorkoutType.Recovery => "#A5D6A7",    // pale green
+        WorkoutType.Fartlek => "#FF8A65",     // soft deep orange
+        WorkoutType.HillRepeats => "#A1887F", // soft brown
+        WorkoutType.RacePace => "#FFD54F",    // soft gold
+        WorkoutType.CrossTraining => "#BA68C8", // soft purple
+        WorkoutType.Strength => "#90A4AE",    // soft blue grey
+        WorkoutType.Rest => "#BDBDBD",        // light grey
+        _ => "#BDBDBD"
     };
 
     public static string GetText(WorkoutType type) => type switch
     {
-        WorkoutType.RacePace or WorkoutType.Easy or WorkoutType.Recovery => "#333",
-        _ => "#fff"
+        WorkoutType.Rest => "#666",
+        _ => "#333"
     };
 }

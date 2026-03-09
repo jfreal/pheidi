@@ -50,7 +50,7 @@
     public NewTrainingPlan Plan { get; set; } = default!;
 
     [Parameter]
-    public int UserId { get; set; }
+    public string UserShareToken { get; set; } = string.Empty;
 
     private string subscribeUrl = string.Empty;
     private string shareUrl = string.Empty;
@@ -59,8 +59,8 @@
     protected override void OnInitialized()
     {
         var baseUrl = Navigation.BaseUri.TrimEnd('/');
-        subscribeUrl = $"{baseUrl}/api/calendar/user-{UserId}";
-        shareUrl = $"{baseUrl}/api/shared/plan-{Plan.Id}";
+        subscribeUrl = $"{baseUrl}/api/calendar/{UserShareToken}";
+        shareUrl = $"{baseUrl}/api/shared/{Plan.ShareToken}";
     }
 
     private async Task DownloadIcs()

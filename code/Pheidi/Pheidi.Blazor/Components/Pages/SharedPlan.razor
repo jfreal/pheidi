@@ -1,4 +1,4 @@
-@page "/shared/{PlanId:int}"
+@page "/shared/{Token}"
 @using Microsoft.EntityFrameworkCore
 @using Pheidi.Blazor.Data
 @using Pheidi.Blazor.Components.Shared
@@ -92,7 +92,7 @@ else
 
 @code {
     [Parameter]
-    public int PlanId { get; set; }
+    public string Token { get; set; } = string.Empty;
 
     private NewTrainingPlan? plan;
 
@@ -102,16 +102,16 @@ else
             .Include(p => p.RaceGoal)
             .Include(p => p.Weeks)
                 .ThenInclude(w => w.Workouts)
-            .Where(p => p.Id == PlanId)
+            .Where(p => p.ShareToken == Token)
             .FirstOrDefaultAsync();
     }
 
     private static string GetPhaseColor(TrainingPhase phase) => phase switch
     {
-        TrainingPhase.Base => "#28a745",
-        TrainingPhase.Build => "#fd7e14",
-        TrainingPhase.Peak => "#dc3545",
-        TrainingPhase.Taper => "#6f42c1",
-        _ => "#6c757d"
+        TrainingPhase.Base => "#81C784",
+        TrainingPhase.Build => "#FFB74D",
+        TrainingPhase.Peak => "#E57373",
+        TrainingPhase.Taper => "#64B5F6",
+        _ => "#BDBDBD"
     };
 }

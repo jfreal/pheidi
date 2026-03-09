@@ -1,39 +1,46 @@
 <h4>Which days can you train?</h4>
-<p class="text-muted">Select at least 3 days.</p>
+<p class="text-muted">Select at least 3 days, then pick your long run day.</p>
 
-<div class="d-flex gap-2 flex-wrap mb-3">
+<div class="d-flex gap-2 flex-wrap mb-2">
     @foreach (var day in allDays)
     {
         var d = day;
         var isSelected = selectedDays.Contains(d);
-        <button class="btn btn-lg @(isSelected ? "btn-primary" : "btn-outline-secondary")"
-                style="min-width: 80px;"
-                @onclick="() => ToggleDay(d)">
-            @d.ToString()[..3]
-        </button>
+        <div class="text-center">
+            <button class="btn btn-lg @(isSelected ? "btn-primary" : "btn-outline-secondary")"
+                    style="min-width: 80px;"
+                    @onclick="() => ToggleDay(d)">
+                @d.ToString()[..3]
+            </button>
+            @if (isSelected)
+            {
+                <div class="form-check d-flex justify-content-center mt-1">
+                    <input class="form-check-input" type="radio" name="longRunDay"
+                           checked="@(longRunDay == d)"
+                           @onchange="() => SetLongRunDay(d)" />
+                    <label class="form-check-label ms-1 small">Long</label>
+                </div>
+            }
+        </div>
     }
 </div>
 
 @if (selectedDays.Count < 3)
 {
-    <div class="alert alert-warning">
+    <div class="alert alert-warning mt-2">
         <i class="fas fa-exclamation-triangle"></i> Please select at least 3 training days. Currently selected: @selectedDays.Count
+    </div>
+}
+else if (!HasValidLongRunDay)
+{
+    <div class="alert alert-warning mt-2">
+        <i class="fas fa-exclamation-triangle"></i> Please select a long run day.
     </div>
 }
 else
 {
-    <div class="mb-3">
-        <label class="form-label fw-bold">Preferred long run day</label>
-        <select class="form-select" style="max-width: 200px;" @bind="longRunDay" @bind:after="UpdateLongRunDay">
-            @foreach (var day in selectedDays.OrderBy(d => d))
-            {
-                <option value="@day">@day</option>
-            }
-        </select>
-    </div>
-
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i> @selectedDays.Count days selected. Long run on <strong>@Profile.PreferredLongRunDay</strong>.
+    <div class="alert alert-info mt-2">
+        <i class="fas fa-info-circle"></i> @selectedDays.Count days selected. Long run on <strong>@longRunDay</strong>.
     </div>
 }
 
@@ -51,36 +58,40 @@ else
     ];
 
     private HashSet<DayOfWeek> selectedDays = [];
-    private DayOfWeek longRunDay;
+    private DayOfWeek? longRunDay;
+
+    public bool HasValidLongRunDay => longRunDay.HasValue && selectedDays.Contains(longRunDay.Value);
 
     protected override void OnInitialized()
     {
         selectedDays = new HashSet<DayOfWeek>(Profile.AvailableDays);
-        longRunDay = Profile.PreferredLongRunDay;
+        longRunDay = Profile.AvailableDays.Length > 0 ? Profile.PreferredLongRunDay : null;
     }
 
     private async Task ToggleDay(DayOfWeek day)
     {
         if (selectedDays.Contains(day))
+        {
             selectedDays.Remove(day);
+            if (longRunDay == day)
+                longRunDay = null;
+        }
         else
+        {
             selectedDays.Add(day);
+        }
 
         Profile.AvailableDays = selectedDays.OrderBy(d => d).ToArray();
-
-        // If current long run day was deselected, pick another
-        if (!selectedDays.Contains(longRunDay) && selectedDays.Count > 0)
-        {
-            longRunDay = selectedDays.OrderBy(d => d).Last();
-            Profile.PreferredLongRunDay = longRunDay;
-        }
+        if (longRunDay.HasValue)
+            Profile.PreferredLongRunDay = longRunDay.Value;
 
         await OnChanged.InvokeAsync();
     }
 
-    private async Task UpdateLongRunDay()
+    private async Task SetLongRunDay(DayOfWeek day)
     {
-        Profile.PreferredLongRunDay = longRunDay;
+        longRunDay = day;
+        Profile.PreferredLongRunDay = day;
         await OnChanged.InvokeAsync();
     }
 }

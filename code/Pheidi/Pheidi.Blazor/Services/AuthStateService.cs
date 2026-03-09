@@ -28,24 +28,38 @@ public class AuthStateService
     {
         try
         {
-            var result = await _storage.GetAsync<int>(SessionKey);
-            if (result.Success)
+            var result = await _storage.GetAsync<SessionData>(SessionKey);
+            if (result.Success && result.Value is { } session)
             {
-                CurrentUser = await _db.Users.FindAsync(result.Value);
-                if (CurrentUser != null)
-                    OnAuthStateChanged?.Invoke();
+                if (session.ExpiresAt > DateTime.UtcNow)
+                {
+                    CurrentUser = await _db.Users.FindAsync(session.UserId);
+                    if (CurrentUser != null)
+                    {
+                        OnAuthStateChanged?.Invoke();
+                        return;
+                    }
+                }
+
+                // Expired or user not found — clean up
+                await _storage.DeleteAsync(SessionKey);
             }
         }
         catch
         {
-            // Storage not available (prerendering) — ignore
+            // Storage not available (prerendering) or decryption failed — ignore
         }
     }
 
     public async Task SignInAsync(AppUser user)
     {
         CurrentUser = user;
-        await _storage.SetAsync(SessionKey, user.Id);
+        var session = new SessionData
+        {
+            UserId = user.Id,
+            ExpiresAt = DateTime.UtcNow.AddDays(SessionDays)
+        };
+        await _storage.SetAsync(SessionKey, session);
         OnAuthStateChanged?.Invoke();
     }
 
@@ -54,5 +68,11 @@ public class AuthStateService
         CurrentUser = null;
         await _storage.DeleteAsync(SessionKey);
         OnAuthStateChanged?.Invoke();
+    }
+
+    private class SessionData
+    {
+        public int UserId { get; set; }
+        public DateTime ExpiresAt { get; set; }
     }
 }

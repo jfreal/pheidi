@@ -1,5 +1,6 @@
 @page "/calendar"
 @rendermode InteractiveServer
+@implements IDisposable
 @using Pheidi.Blazor.Services
 @inject PlanStateService PlanState
 @inject AuthStateService AuthState
@@ -75,6 +76,18 @@ else
 @code {
     private CalendarView currentView = CalendarView.Overview;
     private DateTime selectedDate = DateTime.Today;
+
+    protected override void OnInitialized()
+    {
+        AuthState.OnAuthStateChanged += HandleAuthStateChanged;
+    }
+
+    private void HandleAuthStateChanged() => InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        AuthState.OnAuthStateChanged -= HandleAuthStateChanged;
+    }
 
     public enum CalendarView { Monthly, Weekly, Daily, Overview }
 }

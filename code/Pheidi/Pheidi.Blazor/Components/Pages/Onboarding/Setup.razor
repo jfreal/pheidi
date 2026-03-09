@@ -1,5 +1,6 @@
 @page "/setup"
 @rendermode InteractiveServer
+@implements IDisposable
 @using Pheidi.Blazor.Services
 @inject PlanStateService PlanState
 @inject AuthStateService AuthState
@@ -84,9 +85,12 @@
 
     protected override void OnInitialized()
     {
+        AuthState.OnAuthStateChanged += HandleAuthStateChanged;
         if (PlanState.RaceGoal.RaceDate == default)
             PlanState.RaceGoal.RaceDate = DateTime.Today.AddMonths(4);
     }
+
+    private void HandleAuthStateChanged() => InvokeAsync(StateHasChanged);
 
     private void NextStep()
     {
@@ -105,7 +109,8 @@
         0 => PlanState.RaceGoal.RaceDate > DateTime.Today,
         1 => true,
         2 => true,
-        3 => PlanState.UserProfile.AvailableDays.Length >= 3,
+        3 => PlanState.UserProfile.AvailableDays.Length >= 3
+             && PlanState.UserProfile.AvailableDays.Contains(PlanState.UserProfile.PreferredLongRunDay),
         _ => true
     };
 
@@ -113,5 +118,10 @@
     {
         PlanState.GeneratePlan();
         Navigation.NavigateTo("/calendar");
+    }
+
+    public void Dispose()
+    {
+        AuthState.OnAuthStateChanged -= HandleAuthStateChanged;
     }
 }

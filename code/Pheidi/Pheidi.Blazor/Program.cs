@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Pheidi.Blazor.Components;
 using Pheidi.Blazor.Data;
@@ -9,6 +10,12 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+// Persist data protection keys so ProtectedLocalStorage survives app restarts
+var keysDir = Path.Combine(builder.Environment.ContentRootPath, ".keys");
+builder.Services.AddDataProtection()
+    .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
+    .SetApplicationName("Pheidi");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
@@ -41,18 +48,17 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseAntiforgery();
 
-// Calendar subscription endpoint
+// Calendar subscription endpoint (uses non-guessable share token)
 app.MapGet("/api/calendar/{token}", async (string token, AppDbContext db, ICalExportService icalService) =>
 {
-    // Token format: user-{userId} (simple token for dev)
-    if (!token.StartsWith("user-") || !int.TryParse(token.AsSpan(5), out var userId))
-        return Results.NotFound();
+    var user = await db.Users.FirstOrDefaultAsync(u => u.ShareToken == token);
+    if (user == null) return Results.NotFound();
 
     var plan = await db.TrainingPlans
         .Include(p => p.RaceGoal)
         .Include(p => p.Weeks)
             .ThenInclude(w => w.Workouts)
-        .Where(p => p.UserId == userId && p.Status == PlanStatus.Active)
+        .Where(p => p.UserId == user.Id && p.Status == PlanStatus.Active)
         .FirstOrDefaultAsync();
 
     if (plan == null) return Results.NotFound();
@@ -61,17 +67,14 @@ app.MapGet("/api/calendar/{token}", async (string token, AppDbContext db, ICalEx
     return Results.Text(ics, "text/calendar");
 });
 
-// Shared read-only plan view endpoint
+// Shared read-only plan view endpoint (uses non-guessable share token)
 app.MapGet("/api/shared/{token}", async (string token, AppDbContext db) =>
 {
-    if (!token.StartsWith("plan-") || !int.TryParse(token.AsSpan(5), out var planId))
-        return Results.NotFound();
-
     var plan = await db.TrainingPlans
         .Include(p => p.RaceGoal)
         .Include(p => p.Weeks)
             .ThenInclude(w => w.Workouts)
-        .Where(p => p.Id == planId)
+        .Where(p => p.ShareToken == token)
         .FirstOrDefaultAsync();
 
     if (plan == null) return Results.NotFound();

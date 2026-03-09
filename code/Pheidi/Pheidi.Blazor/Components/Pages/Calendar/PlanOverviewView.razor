@@ -1,10 +1,10 @@
 @using Pheidi.Blazor.Components.Shared
 
 <div class="d-flex gap-3 mb-3 flex-wrap">
-    <span><span class="badge" style="background-color: #4CAF50;">&nbsp;</span> Base</span>
-    <span><span class="badge" style="background-color: #FF9800;">&nbsp;</span> Build</span>
-    <span><span class="badge" style="background-color: #F44336;">&nbsp;</span> Peak</span>
-    <span><span class="badge" style="background-color: #2196F3;">&nbsp;</span> Taper</span>
+    <span><span class="badge" style="background-color: #81C784;">&nbsp;</span> Base</span>
+    <span><span class="badge" style="background-color: #FFB74D;">&nbsp;</span> Build</span>
+    <span><span class="badge" style="background-color: #E57373;">&nbsp;</span> Peak</span>
+    <span><span class="badge" style="background-color: #64B5F6;">&nbsp;</span> Taper</span>
 </div>
 
 <div class="row g-3 mb-4">
@@ -191,11 +191,11 @@
 
     private static string PhaseColor(TrainingPhase phase) => phase switch
     {
-        TrainingPhase.Base => "#4CAF50",
-        TrainingPhase.Build => "#FF9800",
-        TrainingPhase.Peak => "#F44336",
-        TrainingPhase.Taper => "#2196F3",
-        _ => "#9E9E9E"
+        TrainingPhase.Base => "#81C784",
+        TrainingPhase.Build => "#FFB74D",
+        TrainingPhase.Peak => "#E57373",
+        TrainingPhase.Taper => "#64B5F6",
+        _ => "#BDBDBD"
     };
 
     private static string ShortType(WorkoutType type) => type switch

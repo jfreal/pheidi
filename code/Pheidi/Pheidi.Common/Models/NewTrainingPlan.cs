@@ -17,6 +17,7 @@ public class NewTrainingPlan
     public ProgressionPattern ProgressionPattern { get; set; } = ProgressionPattern.ThreeUpOneDown;
     public List<TrainingWeek> Weeks { get; set; } = [];
     public PlanStatus Status { get; set; } = PlanStatus.Active;
+    public string ShareToken { get; set; } = Guid.NewGuid().ToString("N");
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
     public int TotalWeeks => Weeks.Count;
