@@ -1,4 +1,6 @@
 @using Pheidi.Blazor.Components.Shared
+@using Pheidi.Blazor.Services
+@inject WorkoutRepository WorkoutRepo
 
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <span><span class="badge" style="background-color: #81C784;">&nbsp;</span> Base</span>
@@ -76,7 +78,8 @@
                     @foreach (var day in weekDays)
                     {
                         var workout = week.Workouts.FirstOrDefault(w => w.Date.DayOfWeek == day);
-                        <td class="text-center p-1">
+                        <td class="text-center p-1" style="cursor: pointer;"
+                            @onclick="@(() => { if (workout != null) OpenEdit(workout); })">
                             @if (workout != null && workout.Type != WorkoutType.Rest)
                             {
                                 <div>
@@ -179,6 +182,45 @@
     </table>
 </div>
 
+@if (_editTarget != null)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100"
+         style="background: rgba(0,0,0,0.3); z-index: 1040;"
+         @onclick="CancelEdit"></div>
+
+    <div class="position-fixed top-50 start-50 translate-middle card shadow"
+         style="z-index: 1050; width: 280px;"
+         @onclick:stopPropagation="true">
+        <div class="card-body">
+            <h6 class="card-title mb-3">
+                Edit &mdash; @_editTarget.Date.ToString("ddd MMM d")
+            </h6>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Type</label>
+                <select class="form-select form-select-sm" @bind="_editType">
+                    @foreach (var wt in Enum.GetValues<WorkoutType>())
+                    {
+                        <option value="@wt">@wt</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-semibold">Distance (miles)</label>
+                <input type="number" class="form-control form-control-sm"
+                       step="0.1" min="0" max="50"
+                       @bind="_editDistance" @bind:event="oninput" />
+            </div>
+
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                <button class="btn btn-sm btn-primary" @onclick="SaveEdit">Save</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     [Parameter, EditorRequired]
     public NewTrainingPlan Plan { get; set; } = default!;
@@ -212,4 +254,27 @@
         WorkoutType.Strength => "Str",
         _ => type.ToString()
     };
+
+    // --- Edit popover state ---
+    private ScheduledWorkout? _editTarget;
+    private WorkoutType _editType;
+    private decimal _editDistance;
+
+    private void OpenEdit(ScheduledWorkout workout)
+    {
+        _editTarget = workout;
+        _editType = workout.Type;
+        _editDistance = workout.TargetDistanceMiles;
+    }
+
+    private void CancelEdit() => _editTarget = null;
+
+    private async Task SaveEdit()
+    {
+        if (_editTarget == null) return;
+        _editTarget.Type = _editType;
+        _editTarget.TargetDistanceMiles = _editType == WorkoutType.Rest ? 0 : _editDistance;
+        await WorkoutRepo.UpdateWorkoutAsync(_editTarget);
+        _editTarget = null;
+    }
 }

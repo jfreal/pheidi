@@ -79,14 +79,16 @@ else
 
     protected override void OnInitialized()
     {
-        AuthState.OnAuthStateChanged += HandleAuthStateChanged;
+        AuthState.OnAuthStateChanged += HandleStateChanged;
+        PlanState.OnPlanChanged += HandleStateChanged;
     }
 
-    private void HandleAuthStateChanged() => InvokeAsync(StateHasChanged);
+    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
     public void Dispose()
     {
-        AuthState.OnAuthStateChanged -= HandleAuthStateChanged;
+        AuthState.OnAuthStateChanged -= HandleStateChanged;
+        PlanState.OnPlanChanged -= HandleStateChanged;
     }
 
     public enum CalendarView { Monthly, Weekly, Daily, Overview }

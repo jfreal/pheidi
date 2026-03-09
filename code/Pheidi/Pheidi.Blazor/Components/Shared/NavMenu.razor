@@ -78,10 +78,11 @@
 
     protected override void OnInitialized()
     {
-        AuthState.OnAuthStateChanged += HandleAuthStateChanged;
+        AuthState.OnAuthStateChanged += HandleStateChanged;
+        PlanState.OnPlanChanged += HandleStateChanged;
     }
 
-    private void HandleAuthStateChanged()
+    private void HandleStateChanged()
     {
         InvokeAsync(StateHasChanged);
     }
@@ -113,6 +114,7 @@
 
     public void Dispose()
     {
-        AuthState.OnAuthStateChanged -= HandleAuthStateChanged;
+        AuthState.OnAuthStateChanged -= HandleStateChanged;
+        PlanState.OnPlanChanged -= HandleStateChanged;
     }
 }

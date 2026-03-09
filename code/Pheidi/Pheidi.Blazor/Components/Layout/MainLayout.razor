@@ -2,6 +2,7 @@
 @implements IDisposable
 @using Pheidi.Blazor.Services
 @inject AuthStateService AuthState
+@inject PlanStateService PlanState
 
 <NavMenu />
 
@@ -30,6 +31,10 @@
         if (firstRender)
         {
             await AuthState.InitializeAsync();
+            if (AuthState.IsAuthenticated)
+            {
+                await PlanState.LoadActivePlanAsync();
+            }
             StateHasChanged();
         }
     }

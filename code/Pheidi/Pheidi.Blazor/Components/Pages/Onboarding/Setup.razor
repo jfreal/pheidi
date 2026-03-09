@@ -114,9 +114,9 @@
         _ => true
     };
 
-    private void GeneratePlan()
+    private async Task GeneratePlan()
     {
-        PlanState.GeneratePlan();
+        await PlanState.GeneratePlanAsync();
         Navigation.NavigateTo("/calendar");
     }
 
