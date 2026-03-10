@@ -4,6 +4,7 @@ using Pheidi.Blazor.Components;
 using Pheidi.Blazor.Data;
 using Pheidi.Blazor.Services;
 using Pheidi.Common.Models;
+using Pheidi.Common.Engines;
 using Pheidi.Common.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +18,7 @@ builder.Services.AddDataProtection()
     .PersistKeysToFileSystem(new DirectoryInfo(keysDir))
     .SetApplicationName("Pheidi");
 
-builder.Services.AddDbContext<AppDbContext>(options =>
+builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
         ?? "Data Source=pheidi.db"));
 
@@ -30,6 +31,9 @@ builder.Services.AddScoped<PlanRepository>();
 builder.Services.AddScoped<WorkoutRepository>();
 builder.Services.AddScoped<ICalExportService>();
 builder.Services.AddScoped<RacePredictionService>();
+builder.Services.AddSingleton<WorkoutLoggingService>();
+builder.Services.AddSingleton<PdfExportService>();
+builder.Services.AddSingleton<ScheduleFlexibilityEngine>();
 
 var app = builder.Build();
 

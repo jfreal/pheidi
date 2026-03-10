@@ -33,6 +33,16 @@ public class PaceZone
         [VdotZone.Repetition] = (9, 10, "All-out effort")
     };
 
+    public PaceZone Clone() => new()
+    {
+        Zone = Zone,
+        MinPacePerMile = MinPacePerMile,
+        MaxPacePerMile = MaxPacePerMile,
+        RpeMin = RpeMin,
+        RpeMax = RpeMax,
+        RpeDescription = RpeDescription
+    };
+
     public static PaceZone ForWorkoutType(WorkoutType type) => type switch
     {
         WorkoutType.Easy or WorkoutType.Recovery => new PaceZone

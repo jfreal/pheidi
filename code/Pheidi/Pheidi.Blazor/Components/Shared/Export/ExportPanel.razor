@@ -1,5 +1,7 @@
 @using Pheidi.Common.Services
+@implements IAsyncDisposable
 @inject ICalExportService ICalService
+@inject PdfExportService PdfService
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
@@ -59,6 +61,7 @@
     private string subscribeUrl = string.Empty;
     private string shareUrl = string.Empty;
     private bool showCopied;
+    private IJSObjectReference? _jsModule;
 
     protected override void OnInitialized()
     {
@@ -67,12 +70,20 @@
         shareUrl = $"{baseUrl}/api/shared/{Plan.ShareToken}";
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _jsModule = await JS.InvokeAsync<IJSObjectReference>("import", "./js/fileDownload.js");
+        }
+    }
+
     private async Task DownloadIcs()
     {
         var bytes = ICalService.GenerateIcsFile(Plan);
         var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval",
-            $"{{const a=document.createElement('a');a.href='data:text/calendar;base64,{base64}';a.download='training-plan.ics';a.click();}}");
+        if (_jsModule != null)
+            await _jsModule.InvokeVoidAsync("downloadFile", base64, "text/calendar", "training-plan.ics");
     }
 
     private async Task CopySubscribeUrl()
@@ -100,10 +111,17 @@
 
     private async Task DownloadPdf()
     {
-        var pdfService = new PdfExportService();
-        var bytes = pdfService.GeneratePdfBytes(Plan);
+        var bytes = PdfService.GeneratePdfBytes(Plan);
         var base64 = Convert.ToBase64String(bytes);
-        await JS.InvokeVoidAsync("eval",
-            $"{{const a=document.createElement('a');a.href='data:text/html;base64,{base64}';a.download='training-plan.html';a.click();}}");
+        if (_jsModule != null)
+            await _jsModule.InvokeVoidAsync("downloadFile", base64, "text/html", "training-plan.html");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_jsModule != null)
+        {
+            await _jsModule.DisposeAsync();
+        }
     }
 }

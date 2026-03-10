@@ -7,6 +7,7 @@
 @inject UserService UserService
 @inject WorkoutRepository WorkoutRepo
 @inject NavigationManager Navigation
+@inject ScheduleFlexibilityEngine FlexEngine
 
 <PageTitle>Pheidi - Settings</PageTitle>
 
@@ -114,12 +115,18 @@ else
 
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Preferred Long Run Day</label>
-                    <select class="form-select" @bind="profile.PreferredLongRunDay">
-                        @foreach (var day in selectedDays)
+                    <div class="d-flex gap-2 flex-wrap">
+                        @foreach (var day in selectedDays.OrderBy(d => d))
                         {
-                            <option value="@day">@day</option>
+                            var d = day;
+                            var isLongRun = profile.PreferredLongRunDay == d;
+                            <button class="btn btn-sm @(isLongRun ? "btn-success" : "btn-outline-secondary")"
+                                    @onclick="() => profile.PreferredLongRunDay = d">
+                                @d.ToString()[..3]
+                                @if (isLongRun) { <i class="fas fa-running ms-1"></i> }
+                            </button>
                         }
-                    </select>
+                    </div>
                 </div>
 
                 @if (PlanState.HasActivePlan)
@@ -181,13 +188,12 @@ else
         await UserService.SaveProfileAsync(profile);
 
         // Update PlanStateService so other components see the change
-        PlanState.UserProfile = profile;
+        PlanState.UpdateUserProfile(profile);
 
         // Reflow remaining weeks if available days changed and there's an active plan
         if (PlanState.HasActivePlan && !oldDays.SequenceEqual(profile.AvailableDays))
         {
-            var engine = new ScheduleFlexibilityEngine();
-            engine.ReflowRemainingWeeks(PlanState.ActivePlan!, profile.AvailableDays);
+            FlexEngine.ReflowRemainingWeeks(PlanState.ActivePlan!, profile.AvailableDays);
 
             // Persist modified workouts
             foreach (var workout in PlanState.ActivePlan!.Weeks.SelectMany(w => w.Workouts)

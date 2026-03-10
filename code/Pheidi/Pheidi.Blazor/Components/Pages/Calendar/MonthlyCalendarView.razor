@@ -3,6 +3,7 @@
 @using Pheidi.Blazor.Services
 @using Pheidi.Common.Services
 @inject WorkoutRepository WorkoutRepo
+@inject WorkoutLoggingService LoggingService
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <button class="btn btn-sm btn-outline-secondary" @onclick="PreviousMonth">
@@ -190,8 +191,7 @@
 
     private async Task HandleQuickComplete(ScheduledWorkout workout)
     {
-        var service = new WorkoutLoggingService();
-        service.QuickComplete(workout);
+        LoggingService.QuickComplete(workout);
         await WorkoutRepo.UpdateWorkoutAsync(workout);
         _detailWorkout = null;
     }

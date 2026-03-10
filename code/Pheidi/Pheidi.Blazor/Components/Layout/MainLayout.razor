@@ -39,9 +39,9 @@
         }
     }
 
-    private void HandleAuthStateChanged()
+    private Task HandleAuthStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        return InvokeAsync(StateHasChanged);
     }
 
     public void Dispose()

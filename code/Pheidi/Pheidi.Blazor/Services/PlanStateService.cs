@@ -10,11 +10,11 @@ public class PlanStateService
     private readonly UserService _userService;
     private readonly AuthStateService _auth;
 
-    public UserProfile UserProfile { get; set; } = new();
+    public UserProfile UserProfile { get; private set; } = new();
     public RaceGoal RaceGoal { get; set; } = new();
     public NewTrainingPlan? ActivePlan { get; private set; }
 
-    public event Action? OnPlanChanged;
+    public event Func<Task>? OnPlanChanged;
 
     public PlanStateService(PlanRepository planRepo, UserService userService, AuthStateService auth)
     {
@@ -23,12 +23,17 @@ public class PlanStateService
         _auth = auth;
     }
 
+    public void UpdateUserProfile(UserProfile profile)
+    {
+        UserProfile = profile;
+    }
+
     public async Task LoadActivePlanAsync()
     {
         if (_auth.CurrentUser == null) return;
         ActivePlan = await _planRepo.GetActivePlanAsync(_auth.CurrentUser.Id);
         UserProfile = await _userService.GetOrCreateProfileAsync(_auth.CurrentUser.Id);
-        OnPlanChanged?.Invoke();
+        await NotifyPlanChanged();
     }
 
     public async Task<NewTrainingPlan> GeneratePlanAsync()
@@ -43,7 +48,7 @@ public class PlanStateService
         ActivePlan.UserId = _auth.CurrentUser.Id;
         await _planRepo.SavePlanAsync(ActivePlan);
 
-        OnPlanChanged?.Invoke();
+        await NotifyPlanChanged();
         return ActivePlan;
     }
 
@@ -52,7 +57,7 @@ public class PlanStateService
         if (ActivePlan == null || _auth.CurrentUser == null) return;
         ActivePlan.Status = PlanStatus.Paused;
         await _planRepo.SavePlanAsync(ActivePlan);
-        OnPlanChanged?.Invoke();
+        await NotifyPlanChanged();
     }
 
     public async Task ResumePlanAsync()
@@ -60,7 +65,7 @@ public class PlanStateService
         if (ActivePlan == null || _auth.CurrentUser == null) return;
         ActivePlan.Status = PlanStatus.Active;
         await _planRepo.SavePlanAsync(ActivePlan);
-        OnPlanChanged?.Invoke();
+        await NotifyPlanChanged();
     }
 
     public async Task AbandonPlanAsync()
@@ -69,7 +74,7 @@ public class PlanStateService
         ActivePlan.Status = PlanStatus.Archived;
         await _planRepo.SavePlanAsync(ActivePlan);
         ActivePlan = null;
-        OnPlanChanged?.Invoke();
+        await NotifyPlanChanged();
     }
 
     public bool HasActivePlan => ActivePlan is { Status: PlanStatus.Active };
@@ -78,4 +83,13 @@ public class PlanStateService
     public bool IsOnboardingComplete =>
         RaceGoal.RaceDate > DateTime.Today &&
         UserProfile.AvailableDays.Length >= 3;
+
+    private async Task NotifyPlanChanged()
+    {
+        if (OnPlanChanged != null)
+        {
+            foreach (var handler in OnPlanChanged.GetInvocationList().Cast<Func<Task>>())
+                await handler();
+        }
+    }
 }

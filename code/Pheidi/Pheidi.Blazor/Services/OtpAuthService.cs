@@ -7,7 +7,7 @@ namespace Pheidi.Blazor.Services;
 
 public partial class OtpAuthService
 {
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
     private readonly ILogger<OtpAuthService> _logger;
     private readonly IHostEnvironment _env;
 
@@ -16,9 +16,9 @@ public partial class OtpAuthService
     private const string DebugPhone = "8607782522";
     private const string DebugCode = "999999";
 
-    public OtpAuthService(AppDbContext db, ILogger<OtpAuthService> logger, IHostEnvironment env)
+    public OtpAuthService(IDbContextFactory<AppDbContext> dbFactory, ILogger<OtpAuthService> logger, IHostEnvironment env)
     {
-        _db = db;
+        _dbFactory = dbFactory;
         _logger = logger;
         _env = env;
     }
@@ -36,18 +36,20 @@ public partial class OtpAuthService
             return true;
         }
 
+        using var db = await _dbFactory.CreateDbContextAsync();
+
         // Clean up expired OTP codes opportunistically
         var cutoff = DateTime.UtcNow.AddMinutes(-ExpiryMinutes * 2);
-        var expired = await _db.OtpCodes
+        var expired = await db.OtpCodes
             .Where(c => c.ExpiresAt < cutoff)
             .ToListAsync();
         if (expired.Count > 0)
         {
-            _db.OtpCodes.RemoveRange(expired);
+            db.OtpCodes.RemoveRange(expired);
         }
 
         // Rate limiting: max 5 codes per identifier per hour
-        var recentCount = await _db.OtpCodes
+        var recentCount = await db.OtpCodes
             .CountAsync(c => c.Email == identifier && c.CreatedAt > DateTime.UtcNow.AddHours(-1));
 
         if (recentCount >= MaxAttemptsPerHour)
@@ -64,8 +66,8 @@ public partial class OtpAuthService
             ExpiresAt = DateTime.UtcNow.AddMinutes(ExpiryMinutes)
         };
 
-        _db.OtpCodes.Add(otpCode);
-        await _db.SaveChangesAsync();
+        db.OtpCodes.Add(otpCode);
+        await db.SaveChangesAsync();
 
         // Dev mode: log code to console instead of sending email/SMS
         _logger.LogInformation("OTP code for {Identifier}: {Code}", identifier, code);
@@ -78,21 +80,23 @@ public partial class OtpAuthService
         identifier = NormalizeIdentifier(identifier);
         code = code.Trim();
 
+        using var db = await _dbFactory.CreateDbContextAsync();
+
         // Debug bypass: code 999999 with test phone skips OTP validation
         if (_env.IsDevelopment() && identifier == DebugPhone && code == DebugCode)
         {
             _logger.LogInformation("Debug bypass: auto-login for {Phone}", DebugPhone);
-            var debugUser = await _db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
+            var debugUser = await db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
             if (debugUser == null)
             {
                 debugUser = new AppUser { Email = identifier };
-                _db.Users.Add(debugUser);
-                await _db.SaveChangesAsync();
+                db.Users.Add(debugUser);
+                await db.SaveChangesAsync();
             }
             return debugUser;
         }
 
-        var otpCode = await _db.OtpCodes
+        var otpCode = await db.OtpCodes
             .Where(c => c.Email == identifier && c.Code == code && !c.IsUsed && c.ExpiresAt > DateTime.UtcNow)
             .OrderByDescending(c => c.CreatedAt)
             .FirstOrDefaultAsync();
@@ -103,14 +107,14 @@ public partial class OtpAuthService
         otpCode.IsUsed = true;
 
         // Find or create user
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == identifier);
         if (user == null)
         {
             user = new AppUser { Email = identifier };
-            _db.Users.Add(user);
+            db.Users.Add(user);
         }
 
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
         return user;
     }
 

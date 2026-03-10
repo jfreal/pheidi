@@ -1,0 +1,8 @@
+.workout-cell {
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.workout-cell:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}

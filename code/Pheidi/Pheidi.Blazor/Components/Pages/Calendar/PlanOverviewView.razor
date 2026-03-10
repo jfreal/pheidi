@@ -98,7 +98,7 @@ else
                     @foreach (var day in weekDays)
                     {
                         var workout = week.Workouts.FirstOrDefault(w => w.Date.DayOfWeek == day);
-                        <td class="text-center p-1" style="cursor: pointer;"
+                        <td class="text-center p-1 workout-cell"
                             @onclick="@(() => { if (workout != null) OpenEdit(workout); })">
                             @if (workout != null && workout.Type != WorkoutType.Rest)
                             {

@@ -6,18 +6,20 @@ namespace Pheidi.Blazor.Services;
 
 public class WorkoutRepository
 {
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
-    public WorkoutRepository(AppDbContext db) => _db = db;
+    public WorkoutRepository(IDbContextFactory<AppDbContext> dbFactory) => _dbFactory = dbFactory;
 
     public async Task<ScheduledWorkout?> GetWorkoutAsync(int workoutId)
     {
-        return await _db.ScheduledWorkouts.FindAsync(workoutId);
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.ScheduledWorkouts.FindAsync(workoutId);
     }
 
     public async Task<List<ScheduledWorkout>> GetWorkoutsForDateAsync(int planId, DateTime date)
     {
-        return await _db.TrainingWeeks
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.TrainingWeeks
             .Where(w => w.TrainingPlanId == planId)
             .SelectMany(w => w.Workouts)
             .Where(wo => wo.Date.Date == date.Date)
@@ -26,13 +28,15 @@ public class WorkoutRepository
 
     public async Task UpdateWorkoutAsync(ScheduledWorkout workout)
     {
-        _db.ScheduledWorkouts.Update(workout);
-        await _db.SaveChangesAsync();
+        using var db = await _dbFactory.CreateDbContextAsync();
+        db.ScheduledWorkouts.Update(workout);
+        await db.SaveChangesAsync();
     }
 
     public async Task<List<InjuryReport>> GetActiveInjuriesAsync(int userId)
     {
-        return await _db.InjuryReports
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.InjuryReports
             .Include(r => r.PainHistory)
             .Where(r => r.UserId == userId && r.Status != InjuryStatus.Resolved)
             .ToListAsync();
@@ -40,21 +44,23 @@ public class WorkoutRepository
 
     public async Task<List<InjuryReport>> GetAllInjuriesAsync(int userId)
     {
-        return await _db.InjuryReports
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.InjuryReports
             .Where(r => r.UserId == userId)
             .ToListAsync();
     }
 
     public async Task SaveInjuryReportAsync(InjuryReport report)
     {
+        using var db = await _dbFactory.CreateDbContextAsync();
         if (report.Id == 0)
         {
-            _db.InjuryReports.Add(report);
+            db.InjuryReports.Add(report);
         }
         else
         {
-            _db.InjuryReports.Update(report);
+            db.InjuryReports.Update(report);
         }
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 }

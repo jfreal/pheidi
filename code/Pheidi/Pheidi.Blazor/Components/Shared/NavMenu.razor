@@ -87,9 +87,9 @@
         PlanState.OnPlanChanged += HandleStateChanged;
     }
 
-    private void HandleStateChanged()
+    private Task HandleStateChanged()
     {
-        InvokeAsync(StateHasChanged);
+        return InvokeAsync(StateHasChanged);
     }
 
     private void ToggleNavMenu()

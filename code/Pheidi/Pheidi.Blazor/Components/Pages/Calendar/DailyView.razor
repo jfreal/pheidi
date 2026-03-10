@@ -5,6 +5,7 @@
 @inject WorkoutRepository WorkoutRepo
 @inject PaceCalculator PaceCalc
 @inject PlanStateService PlanState
+@inject WorkoutLoggingService LoggingService
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <button class="btn btn-sm btn-outline-secondary" @onclick="OnPreviousDay">
@@ -213,16 +214,14 @@ else
 
     private async Task HandleSkip(ScheduledWorkout workout)
     {
-        var service = new WorkoutLoggingService();
-        service.SkipWorkout(workout);
+        LoggingService.SkipWorkout(workout);
         await WorkoutRepo.UpdateWorkoutAsync(workout);
         await OnWorkoutChanged.InvokeAsync();
     }
 
     private async Task HandleReschedule(ScheduledWorkout workout)
     {
-        var service = new WorkoutLoggingService();
-        rescheduleSuccess = service.RescheduleToday(Plan, workout);
+        rescheduleSuccess = LoggingService.RescheduleToday(Plan, workout);
 
         if (rescheduleSuccess)
         {

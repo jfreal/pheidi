@@ -105,7 +105,7 @@
             PlanState.RaceGoal.RaceDate = DateTime.Today.AddMonths(4);
     }
 
-    private void HandleAuthStateChanged() => InvokeAsync(StateHasChanged);
+    private Task HandleAuthStateChanged() => InvokeAsync(StateHasChanged);
 
     private void NextStep()
     {

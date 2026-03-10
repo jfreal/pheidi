@@ -1,4 +1,5 @@
 @using Pheidi.Common.Services
+@inject WorkoutLoggingService LoggingService
 
 <button class="btn @(Workout.Status == WorkoutStatus.Completed ? "btn-success" : "btn-outline-success")"
         @onclick="Complete"
@@ -31,8 +32,7 @@
 
     private async Task Complete()
     {
-        var service = new WorkoutLoggingService();
-        service.QuickComplete(Workout);
+        LoggingService.QuickComplete(Workout);
         showMessage = true;
         await OnCompleted.InvokeAsync();
     }

@@ -6,43 +6,47 @@ namespace Pheidi.Blazor.Services;
 
 public class UserService
 {
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
-    public UserService(AppDbContext db) => _db = db;
+    public UserService(IDbContextFactory<AppDbContext> dbFactory) => _dbFactory = dbFactory;
 
     public async Task<UserProfile?> GetProfileAsync(int userId)
     {
-        return await _db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+        using var db = await _dbFactory.CreateDbContextAsync();
+        return await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
     }
 
     public async Task<UserProfile> GetOrCreateProfileAsync(int userId)
     {
-        var profile = await GetProfileAsync(userId);
+        using var db = await _dbFactory.CreateDbContextAsync();
+        var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
         if (profile != null) return profile;
 
         profile = new UserProfile { UserId = userId };
-        _db.UserProfiles.Add(profile);
-        await _db.SaveChangesAsync();
+        db.UserProfiles.Add(profile);
+        await db.SaveChangesAsync();
         return profile;
     }
 
     public async Task SaveProfileAsync(UserProfile profile)
     {
-        var existing = await _db.UserProfiles.FindAsync(profile.Id);
+        using var db = await _dbFactory.CreateDbContextAsync();
+        var existing = await db.UserProfiles.FindAsync(profile.Id);
         if (existing != null)
         {
-            _db.Entry(existing).CurrentValues.SetValues(profile);
+            db.Entry(existing).CurrentValues.SetValues(profile);
         }
         else
         {
-            _db.UserProfiles.Add(profile);
+            db.UserProfiles.Add(profile);
         }
-        await _db.SaveChangesAsync();
+        await db.SaveChangesAsync();
     }
 
     public async Task<bool> IsPaidUserAsync(int userId)
     {
-        var user = await _db.Users.FindAsync(userId);
+        using var db = await _dbFactory.CreateDbContextAsync();
+        var user = await db.Users.FindAsync(userId);
         return user?.IsPaidUser ?? false;
     }
 }

@@ -8,7 +8,7 @@ namespace Pheidi.Blazor.Services;
 public class AuthStateService
 {
     private readonly ProtectedLocalStorage _storage;
-    private readonly AppDbContext _db;
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
 
     private const string SessionKey = "pheidi_session";
     private const int SessionDays = 30;
@@ -16,12 +16,12 @@ public class AuthStateService
     public AppUser? CurrentUser { get; private set; }
     public bool IsAuthenticated => CurrentUser != null;
 
-    public event Action? OnAuthStateChanged;
+    public event Func<Task>? OnAuthStateChanged;
 
-    public AuthStateService(ProtectedLocalStorage storage, AppDbContext db)
+    public AuthStateService(ProtectedLocalStorage storage, IDbContextFactory<AppDbContext> dbFactory)
     {
         _storage = storage;
-        _db = db;
+        _dbFactory = dbFactory;
     }
 
     public async Task InitializeAsync()
@@ -33,10 +33,11 @@ public class AuthStateService
             {
                 if (session.ExpiresAt > DateTime.UtcNow)
                 {
-                    CurrentUser = await _db.Users.FindAsync(session.UserId);
+                    using var db = await _dbFactory.CreateDbContextAsync();
+                    CurrentUser = await db.Users.FindAsync(session.UserId);
                     if (CurrentUser != null)
                     {
-                        OnAuthStateChanged?.Invoke();
+                        await NotifyAuthStateChanged();
                         return;
                     }
                 }
@@ -60,14 +61,23 @@ public class AuthStateService
             ExpiresAt = DateTime.UtcNow.AddDays(SessionDays)
         };
         await _storage.SetAsync(SessionKey, session);
-        OnAuthStateChanged?.Invoke();
+        await NotifyAuthStateChanged();
     }
 
     public async Task SignOutAsync()
     {
         CurrentUser = null;
         await _storage.DeleteAsync(SessionKey);
-        OnAuthStateChanged?.Invoke();
+        await NotifyAuthStateChanged();
+    }
+
+    private async Task NotifyAuthStateChanged()
+    {
+        if (OnAuthStateChanged != null)
+        {
+            foreach (var handler in OnAuthStateChanged.GetInvocationList().Cast<Func<Task>>())
+                await handler();
+        }
     }
 
     private class SessionData

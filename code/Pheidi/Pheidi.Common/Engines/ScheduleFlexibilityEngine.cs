@@ -42,10 +42,15 @@ public class ScheduleFlexibilityEngine
     /// </summary>
     public static void SwapWorkouts(ScheduledWorkout a, ScheduledWorkout b)
     {
+        // Clone PaceZones to avoid EF Core owned-entity tracking conflicts
+        var pzA = a.PaceZone?.Clone();
+        var pzB = b.PaceZone?.Clone();
+
         (a.Type, b.Type) = (b.Type, a.Type);
         (a.TargetDistanceMiles, b.TargetDistanceMiles) = (b.TargetDistanceMiles, a.TargetDistanceMiles);
         (a.TargetDuration, b.TargetDuration) = (b.TargetDuration, a.TargetDuration);
-        (a.PaceZone, b.PaceZone) = (b.PaceZone, a.PaceZone);
+        a.PaceZone = pzB;
+        b.PaceZone = pzA;
         (a.WarmUpDuration, b.WarmUpDuration) = (b.WarmUpDuration, a.WarmUpDuration);
         (a.CoolDownDuration, b.CoolDownDuration) = (b.CoolDownDuration, a.CoolDownDuration);
         (a.Status, b.Status) = (b.Status, a.Status);
@@ -133,11 +138,12 @@ public class ScheduleFlexibilityEngine
 
     private void RedistributeWeek(TrainingWeek week, DayOfWeek[] availableDays)
     {
-        // Collect existing non-rest workouts
-        var workouts = week.Workouts
+        // Snapshot workout data before resetting — clone PaceZone to avoid EF owned-entity conflicts
+        var snapshots = week.Workouts
             .Where(w => w.Type != WorkoutType.Rest && w.Status != WorkoutStatus.Completed)
-            .OrderByDescending(w => w.Type == WorkoutType.LongRun) // Long run first
-            .ThenByDescending(w => w.IsQualityWorkout) // Quality second
+            .OrderByDescending(w => w.Type == WorkoutType.LongRun)
+            .ThenByDescending(w => w.IsQualityWorkout)
+            .Select(w => (w.Type, w.TargetDistanceMiles, PaceZone: w.PaceZone?.Clone(), w.WarmUpDuration, w.CoolDownDuration))
             .ToList();
 
         // Reset all future uncompleted workouts to rest
@@ -150,21 +156,21 @@ public class ScheduleFlexibilityEngine
             w.CoolDownDuration = null;
         }
 
-        // Reassign workouts to new available days
+        // Reassign from snapshots to new available day slots
         var availableSlots = week.Workouts
             .Where(w => availableDays.Contains(w.DayOfWeek) && w.Status != WorkoutStatus.Completed)
             .ToList();
 
-        for (int i = 0; i < Math.Min(workouts.Count, availableSlots.Count); i++)
+        for (int i = 0; i < Math.Min(snapshots.Count, availableSlots.Count); i++)
         {
-            var source = workouts[i];
+            var src = snapshots[i];
             var slot = availableSlots[i];
 
-            slot.Type = source.Type;
-            slot.TargetDistanceMiles = source.TargetDistanceMiles;
-            slot.PaceZone = source.PaceZone;
-            slot.WarmUpDuration = source.WarmUpDuration;
-            slot.CoolDownDuration = source.CoolDownDuration;
+            slot.Type = src.Type;
+            slot.TargetDistanceMiles = src.TargetDistanceMiles;
+            slot.PaceZone = src.PaceZone;
+            slot.WarmUpDuration = src.WarmUpDuration;
+            slot.CoolDownDuration = src.CoolDownDuration;
         }
     }
 

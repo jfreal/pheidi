@@ -12,6 +12,8 @@
 @inject WorkoutRepository WorkoutRepo
 @inject UserService UserService
 @inject NavigationManager Navigation
+@inject WorkoutLoggingService LoggingService
+@inject ScheduleFlexibilityEngine FlexEngine
 
 <PageTitle>Pheidi - Training Calendar</PageTitle>
 
@@ -171,10 +173,15 @@ else
         </div>
     }
 
-    <h4 class="mt-3 mb-3">
-        <i class="far fa-calendar-alt"></i>
-        @PlanState.ActivePlan!.RaceGoal.Distance.DisplayName() Training Plan
-    </h4>
+    <div class="d-flex justify-content-between align-items-center mt-3 mb-3">
+        <h4 class="mb-0">
+            <i class="far fa-calendar-alt"></i>
+            @PlanState.ActivePlan!.RaceGoal.Distance.DisplayName() Training Plan
+        </h4>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="OpenSettings">
+            <i class="fas fa-sliders-h me-1"></i>Settings
+        </button>
+    </div>
 
     <ul class="nav nav-tabs mb-3">
         <li class="nav-item">
@@ -269,6 +276,116 @@ else
                            OnApplied="HandleVacationApplied" OnCancel="() => showVacation = false" />
         </div>
     }
+
+    @* --- Settings slide-out --- *@
+    @if (showSettings)
+    {
+        <div class="position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.3); z-index: 1040;"
+             @onclick="() => showSettings = false"></div>
+
+        <div class="position-fixed top-0 end-0 h-100 bg-white shadow" style="z-index: 1050; width: 360px; overflow-y: auto;"
+             @onclick:stopPropagation="true">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Settings</h5>
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => showSettings = false">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                @if (settingsProfile != null)
+                {
+                    @if (settingsSaved)
+                    {
+                        <div class="alert alert-success py-1 small">
+                            <i class="fas fa-check me-1"></i>Saved — plan updated.
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Experience Level</label>
+                        <select class="form-select form-select-sm" @bind="settingsProfile.ExperienceLevel">
+                            @foreach (var level in Enum.GetValues<ExperienceLevel>())
+                            {
+                                <option value="@level">@level</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Pace Guidance</label>
+                        <select class="form-select form-select-sm" @bind="settingsProfile.PacePreference">
+                            <option value="@PacePreference.RPE">RPE (Effort-Based)</option>
+                            <option value="@PacePreference.VDOT">VDOT (Pace-Based)</option>
+                        </select>
+                    </div>
+
+                    @if (settingsProfile.PacePreference == PacePreference.VDOT)
+                    {
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">VDOT Value</label>
+                            <input type="number" class="form-control form-control-sm" step="0.1" min="20" max="85"
+                                   @bind="settingsProfile.VdotValue" placeholder="e.g. 45" />
+                        </div>
+                    }
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Available Days</label>
+                        <div class="d-flex gap-1 flex-wrap">
+                            @foreach (var day in settingsAllDays)
+                            {
+                                var d = day;
+                                var sel = settingsSelectedDays.Contains(d);
+                                <button class="btn btn-sm @(sel ? "btn-primary" : "btn-outline-secondary")"
+                                        style="min-width: 42px;"
+                                        @onclick="() => ToggleSettingsDay(d)">
+                                    @d.ToString()[..2]
+                                </button>
+                            }
+                        </div>
+                        @if (settingsSelectedDays.Count < 3)
+                        {
+                            <small class="text-danger">Select at least 3 days</small>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Long Run Day</label>
+                        <div class="d-flex gap-1 flex-wrap">
+                            @foreach (var day in settingsSelectedDays.OrderBy(d => d))
+                            {
+                                var d = day;
+                                var isLongRun = settingsProfile.PreferredLongRunDay == d;
+                                <button class="btn btn-sm @(isLongRun ? "btn-success" : "btn-outline-secondary")"
+                                        style="min-width: 42px;"
+                                        @onclick="() => settingsProfile.PreferredLongRunDay = d">
+                                    @d.ToString()[..2]
+                                    @if (isLongRun) { <i class="fas fa-running ms-1"></i> }
+                                </button>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Weekly Miles</label>
+                            <input type="number" class="form-control form-control-sm" step="1" min="0" max="200"
+                                   @bind="settingsProfile.CurrentWeeklyMileage" placeholder="optional" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold small">Experience (mo)</label>
+                            <input type="number" class="form-control form-control-sm" step="1" min="0"
+                                   @bind="settingsProfile.RunningExperienceMonths" placeholder="optional" />
+                        </div>
+                    </div>
+
+                    <button class="btn btn-primary w-100" @onclick="SaveSettingsPanel" disabled="@(settingsSelectedDays.Count < 3)">
+                        <i class="fas fa-save me-1"></i>Apply Changes
+                    </button>
+                }
+            </div>
+        </div>
+    }
 }
 
 @code {
@@ -286,19 +403,30 @@ else
     private bool showAbandonConfirm;
     private bool isRecurringInjury;
 
+    // Settings slide-out state
+    private bool showSettings;
+    private UserProfile? settingsProfile;
+    private List<DayOfWeek> settingsSelectedDays = new();
+    private bool settingsSaved;
+    private static readonly DayOfWeek[] settingsAllDays =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
     protected override void OnInitialized()
     {
         AuthState.OnAuthStateChanged += HandleStateChanged;
         PlanState.OnPlanChanged += HandlePlanChanged;
     }
 
-    private async void HandlePlanChanged()
+    private async Task HandlePlanChanged()
     {
         await LoadActiveInjury();
         await InvokeAsync(StateHasChanged);
     }
 
-    private void HandleStateChanged() => InvokeAsync(StateHasChanged);
+    private Task HandleStateChanged() => InvokeAsync(StateHasChanged);
 
     private async Task LoadActiveInjury()
     {
@@ -440,8 +568,7 @@ else
 
     private async Task QuickCompleteTodayWidget(ScheduledWorkout workout)
     {
-        var service = new WorkoutLoggingService();
-        service.QuickComplete(workout);
+        LoggingService.QuickComplete(workout);
         await WorkoutRepo.UpdateWorkoutAsync(workout);
         StateHasChanged();
     }
@@ -481,6 +608,54 @@ else
             }
         }
         showVacation = false;
+    }
+
+    private async Task OpenSettings()
+    {
+        if (AuthState.CurrentUser != null)
+        {
+            settingsProfile = await UserService.GetOrCreateProfileAsync(AuthState.CurrentUser.Id);
+            settingsSelectedDays = settingsProfile.AvailableDays.ToList();
+            settingsSaved = false;
+        }
+        showSettings = true;
+    }
+
+    private void ToggleSettingsDay(DayOfWeek day)
+    {
+        if (settingsSelectedDays.Contains(day))
+            settingsSelectedDays.Remove(day);
+        else
+            settingsSelectedDays.Add(day);
+    }
+
+    private async Task SaveSettingsPanel()
+    {
+        if (settingsProfile == null || settingsSelectedDays.Count < 3) return;
+
+        var oldDays = settingsProfile.AvailableDays;
+        settingsProfile.AvailableDays = settingsSelectedDays.OrderBy(d => d).ToArray();
+        await UserService.SaveProfileAsync(settingsProfile);
+
+        PlanState.UpdateUserProfile(settingsProfile);
+
+        // Reflow if days changed
+        if (PlanState.HasActivePlan && !oldDays.SequenceEqual(settingsProfile.AvailableDays))
+        {
+            FlexEngine.ReflowRemainingWeeks(PlanState.ActivePlan!, settingsProfile.AvailableDays);
+
+            foreach (var workout in PlanState.ActivePlan!.Weeks.SelectMany(w => w.Workouts)
+                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
+            {
+                await WorkoutRepo.UpdateWorkoutAsync(workout);
+            }
+        }
+
+        settingsSaved = true;
+        StateHasChanged();
+        await Task.Delay(2000);
+        settingsSaved = false;
+        StateHasChanged();
     }
 
     private static string FormatBodyPart(BodyPart part) => part switch
