@@ -2,6 +2,7 @@
 @rendermode InteractiveServer
 @implements IDisposable
 @using Pheidi.Blazor.Services
+@using Pheidi.Common.Engines
 @inject PlanStateService PlanState
 @inject AuthStateService AuthState
 @inject NavigationManager Navigation
@@ -51,6 +52,19 @@
                     break;
                 case 1:
                     <ExperienceLevelStep Profile="PlanState.UserProfile" />
+                    @if (BaseBuildingEngine.ShouldOfferBaseBuilding(PlanState.UserProfile.ExperienceLevel))
+                    {
+                        <div class="alert alert-info mt-3">
+                            <i class="fas fa-seedling me-2"></i>
+                            <strong>New to running?</strong> We recommend a 4-week base building phase before your training plan starts.
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="baseBuilding" @bind="includeBaseBuilding" />
+                                <label class="form-check-label" for="baseBuilding">
+                                    Include base building phase (4 weeks of easy running to build your foundation)
+                                </label>
+                            </div>
+                        </div>
+                    }
                     break;
                 case 2:
                     <PacePreferenceStep Profile="PlanState.UserProfile" />
@@ -81,6 +95,7 @@
 
 @code {
     private int currentStep = 0;
+    private bool includeBaseBuilding;
     private readonly string[] stepNames = ["Race Goal", "Experience", "Pace", "Schedule", "Generate"];
 
     protected override void OnInitialized()
@@ -116,7 +131,17 @@
 
     private async Task GeneratePlan()
     {
-        await PlanState.GeneratePlanAsync();
+        var plan = await PlanState.GeneratePlanAsync();
+
+        // Prepend base building weeks if selected
+        if (includeBaseBuilding)
+        {
+            var bbEngine = new BaseBuildingEngine();
+            var planStartDate = plan.Weeks.Min(w => w.WeekStartDate);
+            var baseWeeks = bbEngine.GenerateBaseBuildingPhase(PlanState.UserProfile, planStartDate);
+            plan.Weeks.InsertRange(0, baseWeeks);
+        }
+
         Navigation.NavigateTo("/calendar");
     }
 

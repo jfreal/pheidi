@@ -37,6 +37,8 @@ public class ScheduledWorkout
     public TimeSpan? ActualDuration { get; set; }
     public int? ActualEffort { get; set; }
     public WorkoutFeedback Feedback { get; set; } = WorkoutFeedback.None;
+    public int? CompletionPercent { get; set; }
+    public int? ReadinessScore { get; set; }
 
     public string Description => Type switch
     {

@@ -1,4 +1,10 @@
 @using Pheidi.Blazor.Components.Shared
+@using Pheidi.Blazor.Components.Shared.Logging
+@using Pheidi.Blazor.Services
+@using Pheidi.Common.Services
+@inject WorkoutRepository WorkoutRepo
+@inject PaceCalculator PaceCalc
+@inject PlanStateService PlanState
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <button class="btn btn-sm btn-outline-secondary" @onclick="OnPreviousDay">
@@ -16,6 +22,8 @@
     </button>
 </div>
 
+<CompletionTracker Plan="Plan" />
+
 @{
     var workout = GetWorkout();
 }
@@ -29,7 +37,7 @@
 }
 else if (workout.Type == WorkoutType.Rest)
 {
-    <div class="card">
+    <div class="card mt-3">
         <div class="card-body text-center py-5">
             <i class="fas fa-couch fa-3x mb-3 text-muted"></i>
             <h4>Rest Day</h4>
@@ -39,13 +47,38 @@ else if (workout.Type == WorkoutType.Rest)
 }
 else
 {
-    <div class="card">
+    <div class="card mt-3">
         <div class="card-header d-flex justify-content-between align-items-center"
              style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type);">
             <h5 class="mb-0">@workout.Type</h5>
             <span class="fs-4 fw-bold">@workout.TargetDistanceMiles.ToString("F1") mi</span>
         </div>
         <div class="card-body">
+            @if (workout.Status == WorkoutStatus.Completed)
+            {
+                <div class="alert alert-success py-2 mb-3">
+                    <i class="fas fa-check-circle me-1"></i> Completed
+                    @if (workout.ActualDistanceMiles.HasValue)
+                    {
+                        <span class="ms-2">@workout.ActualDistanceMiles.Value.ToString("F1") mi</span>
+                    }
+                    @if (workout.ActualDuration.HasValue)
+                    {
+                        <span class="ms-2">@((int)workout.ActualDuration.Value.TotalMinutes) min</span>
+                    }
+                    @if (workout.ActualEffort.HasValue)
+                    {
+                        <span class="ms-2">Effort: @workout.ActualEffort/10</span>
+                    }
+                </div>
+            }
+            else if (workout.Status == WorkoutStatus.Skipped)
+            {
+                <div class="alert alert-secondary py-2 mb-3">
+                    <i class="fas fa-forward me-1"></i> Skipped — @WorkoutLoggingService.GetMissedWorkoutMessage()
+                </div>
+            }
+
             @if (workout.WarmUpDuration.HasValue)
             {
                 <div class="workout-segment mb-3 p-3 bg-light rounded">
@@ -62,6 +95,12 @@ else
                     <div class="mt-2">
                         <span class="badge bg-secondary me-1">@workout.PaceZone.Zone Zone</span>
                         <span>@workout.PaceZone.RpeDescription (RPE @workout.PaceZone.RpeMin-@workout.PaceZone.RpeMax)</span>
+                        @if (GetVdotPace(workout) is { } vdotPace)
+                        {
+                            <div class="small text-primary mt-1">
+                                <i class="fas fa-tachometer-alt me-1"></i>@vdotPace
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -72,6 +111,63 @@ else
                     <h6><i class="fas fa-snowflake text-info"></i> Cool-Down</h6>
                     <p class="mb-0">@((int)workout.CoolDownDuration.Value.TotalMinutes) minutes easy jog / walk</p>
                 </div>
+            }
+
+            @* --- Readiness check-in (today only) --- *@
+            @if (workout.Status == WorkoutStatus.Pending && Date.Date == DateTime.Today && !workout.ReadinessScore.HasValue)
+            {
+                <div class="mb-3 p-3 bg-light rounded">
+                    <h6 class="mb-2"><i class="fas fa-heartbeat me-1"></i> How are you feeling?</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => SetReadiness(workout, 1)">1 Exhausted</button>
+                        <button class="btn btn-sm btn-outline-warning" @onclick="() => SetReadiness(workout, 2)">2 Tired</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => SetReadiness(workout, 3)">3 Normal</button>
+                        <button class="btn btn-sm btn-outline-primary" @onclick="() => SetReadiness(workout, 4)">4 Good</button>
+                        <button class="btn btn-sm btn-outline-success" @onclick="() => SetReadiness(workout, 5)">5 Fresh</button>
+                    </div>
+                </div>
+            }
+            @if (workout.ReadinessScore is <= 2)
+            {
+                <div class="alert alert-info py-2 mb-3">
+                    <i class="fas fa-lightbulb me-1"></i> Consider an easy run today instead. Listen to your body.
+                </div>
+            }
+
+            @* --- Logging actions for pending workouts --- *@
+            @if (workout.Status == WorkoutStatus.Pending)
+            {
+                <hr />
+                <div class="d-flex gap-2 align-items-center mb-3">
+                    <QuickCompleteButton Workout="workout" OnCompleted="() => HandleCompleted(workout)" />
+                    <button class="btn btn-outline-secondary btn-sm" @onclick="() => showManualEntry = !showManualEntry">
+                        <i class="fas fa-edit me-1"></i> Log Details
+                    </button>
+                    <button class="btn btn-outline-info btn-sm" @onclick="() => HandleReschedule(workout)">
+                        <i class="fas fa-exchange-alt me-1"></i> Not Today
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm" @onclick="() => HandleSkip(workout)">
+                        <i class="fas fa-forward me-1"></i> Skip
+                    </button>
+                </div>
+
+                @if (rescheduleMessage != null)
+                {
+                    <div class="alert @(rescheduleSuccess ? "alert-info" : "alert-secondary") py-2 mb-3">
+                        <i class="fas @(rescheduleSuccess ? "fa-exchange-alt" : "fa-forward") me-1"></i> @rescheduleMessage
+                    </div>
+                }
+
+                @if (showManualEntry)
+                {
+                    <ManualEntryForm Workout="workout" OnLogged="() => HandleCompleted(workout)" />
+                }
+            }
+
+            @* --- Feedback prompt after completion --- *@
+            @if (workout.Status == WorkoutStatus.Completed && workout.Feedback == WorkoutFeedback.None && showFeedback)
+            {
+                <PostWorkoutFeedback Workout="workout" OnFeedbackGiven="() => HandleFeedback(workout)" />
             }
 
             <hr />
@@ -96,8 +192,84 @@ else
     [Parameter]
     public EventCallback OnNextDay { get; set; }
 
+    [Parameter]
+    public EventCallback OnWorkoutChanged { get; set; }
+
+    private bool showManualEntry;
+    private bool showFeedback = true;
+    private string? rescheduleMessage;
+    private bool rescheduleSuccess;
+
     private ScheduledWorkout? GetWorkout() =>
         Plan.Weeks.SelectMany(w => w.Workouts).FirstOrDefault(w => w.Date.Date == Date.Date);
+
+    private async Task HandleCompleted(ScheduledWorkout workout)
+    {
+        await WorkoutRepo.UpdateWorkoutAsync(workout);
+        showManualEntry = false;
+        showFeedback = true;
+        await OnWorkoutChanged.InvokeAsync();
+    }
+
+    private async Task HandleSkip(ScheduledWorkout workout)
+    {
+        var service = new WorkoutLoggingService();
+        service.SkipWorkout(workout);
+        await WorkoutRepo.UpdateWorkoutAsync(workout);
+        await OnWorkoutChanged.InvokeAsync();
+    }
+
+    private async Task HandleReschedule(ScheduledWorkout workout)
+    {
+        var service = new WorkoutLoggingService();
+        rescheduleSuccess = service.RescheduleToday(Plan, workout);
+
+        if (rescheduleSuccess)
+        {
+            rescheduleMessage = "Workout moved to a rest day later this week.";
+            // Persist both swapped workouts
+            var week = Plan.Weeks.FirstOrDefault(w => w.Workouts.Contains(workout));
+            if (week != null)
+            {
+                foreach (var w in week.Workouts.Where(w => w.Id > 0))
+                {
+                    await WorkoutRepo.UpdateWorkoutAsync(w);
+                }
+            }
+        }
+        else
+        {
+            rescheduleMessage = "No available rest days — workout skipped.";
+            await WorkoutRepo.UpdateWorkoutAsync(workout);
+        }
+
+        await OnWorkoutChanged.InvokeAsync();
+    }
+
+    private async Task HandleFeedback(ScheduledWorkout workout)
+    {
+        await WorkoutRepo.UpdateWorkoutAsync(workout);
+        showFeedback = false;
+        await OnWorkoutChanged.InvokeAsync();
+    }
+
+    private async Task SetReadiness(ScheduledWorkout workout, int score)
+    {
+        workout.ReadinessScore = score;
+        if (workout.Id > 0)
+            await WorkoutRepo.UpdateWorkoutAsync(workout);
+    }
+
+    private string? GetVdotPace(ScheduledWorkout workout)
+    {
+        var profile = PlanState.UserProfile;
+        if (profile.PacePreference != PacePreference.VDOT || !profile.VdotValue.HasValue || workout.PaceZone == null)
+            return null;
+
+        var zone = PaceCalc.GetPaceZone(workout.PaceZone.Zone, profile.VdotValue.Value);
+        if (zone.MinPacePerMile == null || zone.MaxPacePerMile == null) return null;
+        return $"Pace: {PaceCalculator.FormatPace(zone.MinPacePerMile.Value)} - {PaceCalculator.FormatPace(zone.MaxPacePerMile.Value)} /mile";
+    }
 
     private static string GetCoachingNote(WorkoutType type) => type switch
     {

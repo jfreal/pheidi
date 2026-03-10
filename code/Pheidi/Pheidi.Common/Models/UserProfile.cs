@@ -10,4 +10,6 @@ public class UserProfile
     public DayOfWeek[] AvailableDays { get; set; } = [];
     public DayOfWeek PreferredLongRunDay { get; set; } = DayOfWeek.Saturday;
     public decimal? VdotValue { get; set; }
+    public decimal? CurrentWeeklyMileage { get; set; }
+    public int? RunningExperienceMonths { get; set; }
 }

@@ -169,6 +169,45 @@ public class ScheduleFlexibilityEngine
     }
 
     /// <summary>
+    /// Compresses a week to fit fewer available days.
+    /// Preserves long run + quality sessions, drops easy/recovery runs first.
+    /// </summary>
+    public static void CompressWeek(TrainingWeek week, DayOfWeek[] availableDays)
+    {
+        var available = new HashSet<DayOfWeek>(availableDays);
+        var futureWorkouts = week.Workouts
+            .Where(w => w.Status != WorkoutStatus.Completed && w.Type != WorkoutType.Rest)
+            .ToList();
+
+        var availableSlots = week.Workouts
+            .Where(w => available.Contains(w.DayOfWeek) && w.Status != WorkoutStatus.Completed)
+            .OrderBy(w => w.Date)
+            .ToList();
+
+        if (futureWorkouts.Count <= availableSlots.Count)
+            return; // Enough room, no compression needed
+
+        // Rank workouts by priority: long run > quality > easy/recovery
+        var ranked = futureWorkouts
+            .OrderByDescending(w => w.Type == WorkoutType.LongRun ? 2 : w.IsQualityWorkout ? 1 : 0)
+            .ToList();
+
+        // Keep only as many as we have slots
+        var keep = ranked.Take(availableSlots.Count).ToList();
+        var drop = ranked.Skip(availableSlots.Count).ToList();
+
+        // Convert dropped workouts to rest
+        foreach (var w in drop)
+        {
+            w.Type = WorkoutType.Rest;
+            w.TargetDistanceMiles = 0;
+            w.PaceZone = null;
+            w.WarmUpDuration = null;
+            w.CoolDownDuration = null;
+        }
+    }
+
+    /// <summary>
     /// Handles vacation by reducing volume for the specified date range.
     /// Returns false if the feature requires paid access.
     /// </summary>

@@ -33,7 +33,23 @@
     [Parameter, EditorRequired]
     public NewTrainingPlan Plan { get; set; } = default!;
 
-    private decimal percentage => Plan.CompletionPercentage;
+    private decimal percentage => CalculateWeightedPercentage();
+
+    private decimal CalculateWeightedPercentage()
+    {
+        var runWorkouts = Plan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Where(w => w.IsRunWorkout)
+            .ToList();
+
+        if (runWorkouts.Count == 0) return 0;
+
+        decimal weightedCompleted = runWorkouts
+            .Where(w => w.Status == WorkoutStatus.Completed)
+            .Sum(w => (w.CompletionPercent ?? 100) / 100m);
+
+        return Math.Round(weightedCompleted / runWorkouts.Count * 100, 1);
+    }
 
     private string ProgressBarClass() => percentage switch
     {

@@ -1,6 +1,10 @@
 @using Pheidi.Blazor.Components.Shared
+@using Pheidi.Blazor.Components.Shared.Export
 @using Pheidi.Blazor.Services
+@using Pheidi.Common.Services
 @inject WorkoutRepository WorkoutRepo
+@inject RacePredictionService RacePrediction
+@inject AuthStateService AuthState
 
 <div class="d-flex gap-3 mb-3 flex-wrap">
     <span><span class="badge" style="background-color: #81C784;">&nbsp;</span> Base</span>
@@ -44,12 +48,33 @@
     </div>
 </div>
 
+@{
+    var prediction = RacePrediction.PredictFinishTime(Plan);
+}
+@if (prediction != null)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h6 class="card-title"><i class="fas fa-stopwatch me-1"></i> Race Prediction</h6>
+            <div class="fs-5">
+                @FormatTime(prediction.Value.Optimistic) — @FormatTime(prediction.Value.Conservative)
+            </div>
+            <small class="text-muted">Based on your logged workouts</small>
+        </div>
+    </div>
+}
+else
+{
+    <div class="small text-muted mb-4">
+        <i class="fas fa-chart-line me-1"></i> @RacePrediction.GetPredictionMessage(Plan)
+    </div>
+}
+
 <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle" style="font-size: 0.85rem;">
         <thead class="table-light">
             <tr>
                 <th style="width: 50px;">Wk</th>
-                <th style="width: 60px;">Phase</th>
                 @foreach (var day in weekDays)
                 {
                     <th class="text-center">@day.ToString()[..3]</th>
@@ -70,11 +95,6 @@
                             <i class="fas fa-caret-left text-primary"></i>
                         }
                     </td>
-                    <td>
-                        <span class="badge" style="background-color: @PhaseColor(week.Phase); color: #fff; font-size: 0.7rem;">
-                            @week.Phase.ToString()[..3]
-                        </span>
-                    </td>
                     @foreach (var day in weekDays)
                     {
                         var workout = week.Workouts.FirstOrDefault(w => w.Date.DayOfWeek == day);
@@ -92,10 +112,6 @@
                                     }
                                 </div>
                             }
-                            else if (workout != null)
-                            {
-                                <small class="text-muted">Rest</small>
-                            }
                         </td>
                     }
                     <td class="text-end fw-bold">@week.TotalPlannedDistance.ToString("F1")</td>
@@ -104,7 +120,7 @@
         </tbody>
         <tfoot>
             <tr class="table-light fw-bold">
-                <td colspan="2">Total</td>
+                <td>Total</td>
                 <td colspan="7"></td>
                 <td class="text-end">@Plan.TotalPlannedMiles.ToString("F1")</td>
             </tr>
@@ -180,6 +196,10 @@
             </tr>
         </tfoot>
     </table>
+</div>
+
+<div class="mt-4">
+    <ExportPanel Plan="Plan" UserShareToken="@(AuthState.CurrentUser?.ShareToken ?? "")" />
 </div>
 
 @if (_editTarget != null)
@@ -277,4 +297,9 @@
         await WorkoutRepo.UpdateWorkoutAsync(_editTarget);
         _editTarget = null;
     }
+
+    private static string FormatTime(TimeSpan time) =>
+        time.Hours > 0
+            ? $"{time.Hours}:{time.Minutes:D2}:{time.Seconds:D2}"
+            : $"{time.Minutes}:{time.Seconds:D2}";
 }

@@ -1,0 +1,94 @@
+@using Pheidi.Common.Engines
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-umbrella-beach me-2"></i> Schedule Vacation</h5>
+    </div>
+    <div class="card-body">
+        @if (!applied)
+        {
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Start Date</label>
+                    <input type="date" class="form-control" @bind="startDate" />
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">End Date</label>
+                    <input type="date" class="form-control" @bind="endDate" />
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-semibold">During vacation:</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="fullRest" checked="@fullRest" @onchange="() => fullRest = true" />
+                    <label class="form-check-label" for="fullRest">Full rest (all workouts become rest days)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" id="maintenance" checked="@(!fullRest)" @onchange="() => fullRest = false" />
+                    <label class="form-check-label" for="maintenance">Light maintenance (easy runs at 50% volume)</label>
+                </div>
+            </div>
+
+            @if (endDate < startDate)
+            {
+                <div class="alert alert-warning py-2">End date must be after start date.</div>
+            }
+
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" @onclick="Apply" disabled="@(endDate < startDate)">
+                    <i class="fas fa-check me-1"></i> Apply
+                </button>
+                <button class="btn btn-outline-secondary" @onclick="() => OnCancel.InvokeAsync()">Cancel</button>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-success py-2">
+                <i class="fas fa-check-circle me-1"></i>
+                @resultMessage
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public NewTrainingPlan Plan { get; set; } = default!;
+
+    [Parameter]
+    public bool IsPaidUser { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateTime Start, DateTime End)> OnApplied { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private DateTime startDate = DateTime.Today.AddDays(1);
+    private DateTime endDate = DateTime.Today.AddDays(7);
+    private bool fullRest = true;
+    private bool applied;
+    private string resultMessage = "";
+
+    private async Task Apply()
+    {
+        var engine = new ScheduleFlexibilityEngine();
+        var success = engine.HandleVacation(Plan, startDate, endDate, IsPaidUser, fullRest);
+
+        if (!success)
+        {
+            resultMessage = "Vacation scheduling is a premium feature.";
+            applied = true;
+            return;
+        }
+
+        var days = (endDate - startDate).Days + 1;
+        resultMessage = fullRest
+            ? $"Vacation applied — {days} day(s) set to rest."
+            : $"Vacation applied — {days} day(s) set to light maintenance.";
+        applied = true;
+
+        await OnApplied.InvokeAsync((startDate, endDate));
+    }
+}

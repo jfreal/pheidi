@@ -120,4 +120,59 @@ public class InjuryEngine
 
         return string.Empty;
     }
+
+    /// <summary>
+    /// Get safe cross-training activities based on injured body part.
+    /// </summary>
+    public static string[] GetSafeCrossTraining(BodyPart bodyPart) => bodyPart switch
+    {
+        BodyPart.Knee => ["Swimming", "Upper body strength", "Cycling (low resistance)"],
+        BodyPart.Ankle => ["Swimming", "Upper body strength", "Seated exercises"],
+        BodyPart.Shin => ["Swimming", "Cycling", "Elliptical (if pain-free)"],
+        BodyPart.Hip => ["Swimming", "Upper body strength", "Core work"],
+        BodyPart.Foot => ["Swimming", "Upper body strength", "Seated cycling"],
+        BodyPart.Calf => ["Swimming", "Upper body strength", "Cycling (low resistance)"],
+        BodyPart.Hamstring => ["Swimming", "Upper body strength", "Walking (if pain-free)"],
+        BodyPart.ITBand => ["Swimming", "Core work", "Upper body strength"],
+        BodyPart.Back => ["Swimming (gentle)", "Walking", "Light stretching"],
+        _ => ["Swimming", "Light cycling", "Core work"]
+    };
+
+    /// <summary>
+    /// Check if the same body part has been injured multiple times (recurring injury).
+    /// </summary>
+    public static bool IsRecurring(BodyPart bodyPart, List<InjuryReport> injuries)
+    {
+        return injuries.Count(i => i.BodyPart == bodyPart) >= 2;
+    }
+
+    /// <summary>
+    /// Get a warning message for recurring injuries.
+    /// </summary>
+    public static string GetRecurringMessage(BodyPart bodyPart) =>
+        $"This is a recurring {FormatBodyPart(bodyPart)} injury. Consider consulting a sports medicine specialist for a biomechanical assessment.";
+
+    /// <summary>
+    /// Analyze pain trend from pain history entries.
+    /// </summary>
+    public static string AnalyzeTrend(List<PainEntry> painHistory)
+    {
+        if (painHistory.Count < 2) return "Insufficient data";
+
+        var recent = painHistory.OrderByDescending(p => p.Date).Take(3).ToList();
+        if (recent.Count < 2) return "Insufficient data";
+
+        var latest = recent[0].Severity;
+        var previous = recent[^1].Severity;
+
+        if (latest < previous - 1) return "Improving";
+        if (latest > previous + 1) return "Worsening";
+        return "Stable";
+    }
+
+    private static string FormatBodyPart(BodyPart part) => part switch
+    {
+        BodyPart.ITBand => "IT Band",
+        _ => part.ToString()
+    };
 }

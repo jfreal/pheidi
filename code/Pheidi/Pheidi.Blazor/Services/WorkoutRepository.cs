@@ -38,6 +38,13 @@ public class WorkoutRepository
             .ToListAsync();
     }
 
+    public async Task<List<InjuryReport>> GetAllInjuriesAsync(int userId)
+    {
+        return await _db.InjuryReports
+            .Where(r => r.UserId == userId)
+            .ToListAsync();
+    }
+
     public async Task SaveInjuryReportAsync(InjuryReport report)
     {
         if (report.Id == 0)

@@ -73,10 +73,18 @@ public class AppDbContext : DbContext
                 .HasForeignKey(wo => wo.TrainingWeekId);
         });
 
-        // ScheduledWorkout — ignore computed PaceZone, store TimeSpan as ticks
+        // ScheduledWorkout — store PaceZone as owned type, TimeSpan as ticks
         modelBuilder.Entity<ScheduledWorkout>(e =>
         {
-            e.Ignore(w => w.PaceZone);
+            e.OwnsOne(w => w.PaceZone, pz =>
+            {
+                pz.Property(p => p.Zone).HasColumnName("PaceZone_Zone");
+                pz.Property(p => p.RpeMin).HasColumnName("PaceZone_RpeMin");
+                pz.Property(p => p.RpeMax).HasColumnName("PaceZone_RpeMax");
+                pz.Property(p => p.RpeDescription).HasColumnName("PaceZone_RpeDescription");
+                pz.Ignore(p => p.MinPacePerMile); // VDOT paces are calculated, not stored
+                pz.Ignore(p => p.MaxPacePerMile);
+            });
 
             e.Property(w => w.TargetDuration)
                 .HasConversion(

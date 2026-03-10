@@ -4,7 +4,8 @@ public enum PlanStatus
 {
     Active,
     Completed,
-    Archived
+    Archived,
+    Paused
 }
 
 public class NewTrainingPlan

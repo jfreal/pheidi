@@ -6,18 +6,18 @@ public static class WorkoutColors
 {
     public static string Get(WorkoutType type) => type switch
     {
-        WorkoutType.Easy => "#81C784",        // soft green
-        WorkoutType.Tempo => "#FFB74D",       // soft orange
-        WorkoutType.Intervals => "#E57373",   // soft red
-        WorkoutType.LongRun => "#64B5F6",     // soft blue
-        WorkoutType.Recovery => "#A5D6A7",    // pale green
-        WorkoutType.Fartlek => "#FF8A65",     // soft deep orange
-        WorkoutType.HillRepeats => "#A1887F", // soft brown
-        WorkoutType.RacePace => "#FFD54F",    // soft gold
-        WorkoutType.CrossTraining => "#BA68C8", // soft purple
-        WorkoutType.Strength => "#90A4AE",    // soft blue grey
-        WorkoutType.Rest => "#BDBDBD",        // light grey
-        _ => "#BDBDBD"
+        WorkoutType.Easy => "#C8E6C9",        // pastel green
+        WorkoutType.Tempo => "#FFE0B2",       // pastel orange
+        WorkoutType.Intervals => "#FFCDD2",   // pastel red
+        WorkoutType.LongRun => "#BBDEFB",     // pastel blue
+        WorkoutType.Recovery => "#DCEDC8",    // pale lime
+        WorkoutType.Fartlek => "#FFCCBC",     // pastel deep orange
+        WorkoutType.HillRepeats => "#D7CCC8", // pastel brown
+        WorkoutType.RacePace => "#FFF9C4",    // pastel gold
+        WorkoutType.CrossTraining => "#E1BEE7", // pastel purple
+        WorkoutType.Strength => "#CFD8DC",    // pastel blue grey
+        WorkoutType.Rest => "#E0E0E0",        // light grey
+        _ => "#E0E0E0"
     };
 
     public static string GetText(WorkoutType type) => type switch

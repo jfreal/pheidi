@@ -1,9 +1,16 @@
 @page "/calendar"
 @rendermode InteractiveServer
 @implements IDisposable
+@using Pheidi.Blazor.Components.Shared
+@using Pheidi.Blazor.Components.Shared.Injury
+@using Pheidi.Blazor.Components.Shared.Logging
 @using Pheidi.Blazor.Services
+@using Pheidi.Common.Engines
+@using Pheidi.Common.Services
 @inject PlanStateService PlanState
 @inject AuthStateService AuthState
+@inject WorkoutRepository WorkoutRepo
+@inject UserService UserService
 @inject NavigationManager Navigation
 
 <PageTitle>Pheidi - Training Calendar</PageTitle>
@@ -16,6 +23,30 @@
         <a href="/signin" class="btn btn-primary"><i class="fas fa-user me-2"></i>Sign In</a>
     </div>
 }
+else if (PlanState.HasPausedPlan)
+{
+    <div class="text-center mt-5">
+        <div class="alert alert-warning d-inline-block">
+            <i class="fas fa-pause-circle fa-3x mb-3 d-block"></i>
+            <h4>Plan Paused</h4>
+            <p>Your training plan is paused. Resume when you're ready — no pressure.</p>
+            <button class="btn btn-primary me-2" @onclick="HandleResume">
+                <i class="fas fa-play me-1"></i>Resume Plan
+            </button>
+            <button class="btn btn-outline-danger" @onclick="() => showAbandonConfirm = true">
+                <i class="fas fa-times me-1"></i>Abandon Plan
+            </button>
+        </div>
+        @if (showAbandonConfirm)
+        {
+            <div class="alert alert-secondary mt-3 d-inline-block">
+                <p class="mb-2">Are you sure? This will archive your plan.</p>
+                <button class="btn btn-sm btn-danger me-2" @onclick="HandleAbandon">Yes, Archive</button>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => showAbandonConfirm = false">Cancel</button>
+            </div>
+        }
+    </div>
+}
 else if (!PlanState.HasActivePlan)
 {
     <div class="text-center mt-5">
@@ -26,6 +57,120 @@ else if (!PlanState.HasActivePlan)
 }
 else
 {
+    @* --- Active injury banner --- *@
+    @if (activeInjury != null)
+    {
+        <div class="alert alert-warning mt-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="fas fa-band-aid me-2"></i>
+                    <strong>Active Injury — @FormatBodyPart(activeInjury.BodyPart)</strong> (Severity @activeInjury.Severity/10)
+                    <div class="small mt-1">@InjuryEngine.GetGuidance(activeInjury.Severity)</div>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="ShowUpdateInjury">
+                        <i class="fas fa-edit me-1"></i>Update
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" @onclick="ResolveInjury">
+                        <i class="fas fa-check me-1"></i>Resolved
+                    </button>
+                </div>
+            </div>
+            @if (activeInjury.PainHistory.Count >= 2)
+            {
+                <div class="small mt-2">
+                    <i class="fas fa-chart-line me-1"></i>Pain trend: <strong>@InjuryEngine.AnalyzeTrend(activeInjury.PainHistory)</strong>
+                </div>
+            }
+            <div class="small mt-1">
+                <i class="fas fa-dumbbell me-1"></i>Safe alternatives: @string.Join(", ", InjuryEngine.GetSafeCrossTraining(activeInjury.BodyPart))
+            </div>
+            @if (isRecurringInjury)
+            {
+                <div class="small mt-1 text-danger">
+                    <i class="fas fa-exclamation-triangle me-1"></i>@InjuryEngine.GetRecurringMessage(activeInjury.BodyPart)
+                </div>
+            }
+        </div>
+
+        @if (showUpdateInjury)
+        {
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6>Update Pain Level: @updateSeverity / 10</h6>
+                    <input type="range" class="form-range" min="1" max="10" @bind="updateSeverity" @bind:event="oninput" />
+                    <div class="d-flex gap-2 mt-2">
+                        <button class="btn btn-sm btn-primary" @onclick="SubmitInjuryUpdate">Save</button>
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="() => showUpdateInjury = false">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        }
+    }
+
+    @* --- Phase transition banner --- *@
+    @if (GetPhaseTransitionMessage() is { } phaseMessage)
+    {
+        <div class="alert alert-info mt-3">
+            <i class="fas fa-flag-checkered me-2"></i>@phaseMessage
+        </div>
+    }
+
+    @* --- Milestone/streak banner --- *@
+    @if (GetMilestoneMessage() is { } milestone)
+    {
+        <div class="alert alert-success mt-3">
+            <i class="fas fa-trophy me-2"></i>@milestone
+        </div>
+    }
+    @if (CalculateStreak() is var streak && streak >= 3)
+    {
+        <div class="small text-muted mt-2 mb-2">
+            <i class="fas fa-fire text-warning me-1"></i>@MessagingService.GetStreakMessage(streak)
+        </div>
+    }
+
+    @* --- End of plan summary --- *@
+    @if (IsPlanComplete())
+    {
+        <EndOfPlanSummary Plan="PlanState.ActivePlan!" />
+    }
+
+    @* --- Today widget --- *@
+    @if (GetTodayWorkout() is { } todayWorkout && !(currentView == CalendarView.Daily && selectedDate.Date == DateTime.Today))
+    {
+        <div class="card mt-3 border-primary">
+            <div class="card-body d-flex justify-content-between align-items-center py-2">
+                <div>
+                    <span class="fw-bold text-primary"><i class="fas fa-sun me-1"></i>Today:</span>
+                    @if (todayWorkout.Type == WorkoutType.Rest)
+                    {
+                        <span class="ms-2">Rest Day</span>
+                    }
+                    else
+                    {
+                        <span class="ms-2">@todayWorkout.Type — @todayWorkout.TargetDistanceMiles.ToString("F1") mi</span>
+                        @if (todayWorkout.Status == WorkoutStatus.Completed)
+                        {
+                            <span class="badge bg-success ms-2"><i class="fas fa-check"></i></span>
+                        }
+                    }
+                </div>
+                <div class="d-flex gap-2">
+                    @if (todayWorkout.Status == WorkoutStatus.Pending && todayWorkout.IsRunWorkout)
+                    {
+                        <button class="btn btn-sm btn-success" @onclick="() => QuickCompleteTodayWidget(todayWorkout)">
+                            <i class="fas fa-check me-1"></i>Done
+                        </button>
+                    }
+                    <button class="btn btn-sm btn-outline-primary" @onclick="GoToToday">
+                        <i class="fas fa-arrow-right me-1"></i>View
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+
     <h4 class="mt-3 mb-3">
         <i class="far fa-calendar-alt"></i>
         @PlanState.ActivePlan!.RaceGoal.Distance.DisplayName() Training Plan
@@ -65,11 +210,64 @@ else
         case CalendarView.Daily:
             <DailyView Plan="PlanState.ActivePlan" Date="selectedDate"
                        OnPreviousDay="() => selectedDate = selectedDate.AddDays(-1)"
-                       OnNextDay="() => selectedDate = selectedDate.AddDays(1)" />
+                       OnNextDay="() => selectedDate = selectedDate.AddDays(1)"
+                       OnWorkoutChanged="StateHasChanged" />
             break;
         case CalendarView.Overview:
             <PlanOverviewView Plan="PlanState.ActivePlan" />
             break;
+    }
+
+    @* --- Discreet action links --- *@
+    <div class="mt-4 d-flex justify-content-between align-items-center">
+        <div class="d-flex gap-3">
+            @if (activeInjury == null && !showInjuryFlow)
+            {
+                <button class="btn btn-sm btn-link text-muted" @onclick="() => showInjuryFlow = true">
+                    <i class="fas fa-band-aid me-1"></i>Report an injury
+                </button>
+            }
+            @if (!showVacation)
+            {
+                <button class="btn btn-sm btn-link text-muted" @onclick="() => showVacation = true">
+                    <i class="fas fa-umbrella-beach me-1"></i>Schedule vacation
+                </button>
+            }
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-sm btn-link text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                <i class="fas fa-ellipsis-h me-1"></i>Plan Options
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" @onclick="HandlePause"><i class="fas fa-pause me-2"></i>Pause Plan</button></li>
+                <li><hr class="dropdown-divider" /></li>
+                <li><button class="dropdown-item text-danger" @onclick="() => showAbandonConfirm = true"><i class="fas fa-times me-2"></i>Abandon Plan</button></li>
+            </ul>
+        </div>
+    </div>
+
+    @if (showAbandonConfirm)
+    {
+        <div class="alert alert-secondary mt-3">
+            <p class="mb-2">Are you sure you want to abandon this plan? It will be archived.</p>
+            <button class="btn btn-sm btn-danger me-2" @onclick="HandleAbandon">Yes, Archive Plan</button>
+            <button class="btn btn-sm btn-outline-secondary" @onclick="() => showAbandonConfirm = false">Cancel</button>
+        </div>
+    }
+
+    @if (showInjuryFlow)
+    {
+        <div class="mt-3">
+            <ReportInjuryFlow OnReport="HandleInjuryReport" OnCancel="() => showInjuryFlow = false" />
+        </div>
+    }
+
+    @if (showVacation)
+    {
+        <div class="mt-3">
+            <VacationEntry Plan="PlanState.ActivePlan!" IsPaidUser="true"
+                           OnApplied="HandleVacationApplied" OnCancel="() => showVacation = false" />
+        </div>
     }
 }
 
@@ -77,18 +275,224 @@ else
     private CalendarView currentView = CalendarView.Overview;
     private DateTime selectedDate = DateTime.Today;
 
+    // Injury state
+    private InjuryReport? activeInjury;
+    private bool showInjuryFlow;
+    private bool showUpdateInjury;
+    private int updateSeverity = 3;
+
+    // Plan management state
+    private bool showVacation;
+    private bool showAbandonConfirm;
+    private bool isRecurringInjury;
+
     protected override void OnInitialized()
     {
         AuthState.OnAuthStateChanged += HandleStateChanged;
-        PlanState.OnPlanChanged += HandleStateChanged;
+        PlanState.OnPlanChanged += HandlePlanChanged;
+    }
+
+    private async void HandlePlanChanged()
+    {
+        await LoadActiveInjury();
+        await InvokeAsync(StateHasChanged);
     }
 
     private void HandleStateChanged() => InvokeAsync(StateHasChanged);
 
+    private async Task LoadActiveInjury()
+    {
+        if (AuthState.CurrentUser == null) return;
+        var injuries = await WorkoutRepo.GetActiveInjuriesAsync(AuthState.CurrentUser.Id);
+        activeInjury = injuries.FirstOrDefault();
+
+        if (activeInjury != null)
+        {
+            var allInjuries = await WorkoutRepo.GetAllInjuriesAsync(AuthState.CurrentUser.Id);
+            isRecurringInjury = InjuryEngine.IsRecurring(activeInjury.BodyPart, allInjuries);
+        }
+    }
+
+    private async Task HandleInjuryReport(InjuryReport report)
+    {
+        if (AuthState.CurrentUser == null) return;
+        report.UserId = AuthState.CurrentUser.Id;
+        await WorkoutRepo.SaveInjuryReportAsync(report);
+
+        // Apply modifications to future workouts
+        if (PlanState.ActivePlan != null)
+        {
+            InjuryEngine.ApplyToFutureWorkouts(PlanState.ActivePlan, report.Severity);
+            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
+            {
+                await WorkoutRepo.UpdateWorkoutAsync(workout);
+            }
+        }
+
+        activeInjury = report;
+        showInjuryFlow = false;
+    }
+
+    private void ShowUpdateInjury()
+    {
+        updateSeverity = activeInjury?.Severity ?? 3;
+        showUpdateInjury = true;
+    }
+
+    private async Task SubmitInjuryUpdate()
+    {
+        if (activeInjury == null) return;
+        activeInjury.Severity = updateSeverity;
+        activeInjury.PainHistory.Add(new PainEntry { Severity = updateSeverity, InjuryReportId = activeInjury.Id });
+        await WorkoutRepo.SaveInjuryReportAsync(activeInjury);
+
+        // Re-apply with updated severity
+        if (PlanState.ActivePlan != null)
+        {
+            InjuryEngine.ApplyToFutureWorkouts(PlanState.ActivePlan, updateSeverity);
+            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
+            {
+                await WorkoutRepo.UpdateWorkoutAsync(workout);
+            }
+        }
+
+        showUpdateInjury = false;
+    }
+
+    private async Task ResolveInjury()
+    {
+        if (activeInjury == null) return;
+        activeInjury.Status = InjuryStatus.Resolved;
+        await WorkoutRepo.SaveInjuryReportAsync(activeInjury);
+
+        // Apply return progression
+        if (PlanState.ActivePlan != null)
+        {
+            var currentWeek = PlanState.ActivePlan.CurrentWeek;
+            if (currentWeek != null)
+            {
+                InjuryEngine.ApplyReturnProgression(PlanState.ActivePlan, currentWeek.WeekNumber);
+                foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                             .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
+                {
+                    await WorkoutRepo.UpdateWorkoutAsync(workout);
+                }
+            }
+        }
+
+        activeInjury = null;
+    }
+
+    private string? GetPhaseTransitionMessage()
+    {
+        if (PlanState.ActivePlan == null) return null;
+        var currentWeek = PlanState.ActivePlan.CurrentWeek;
+        if (currentWeek == null || currentWeek.WeekNumber <= 1) return null;
+
+        var previousWeek = PlanState.ActivePlan.Weeks.FirstOrDefault(w => w.WeekNumber == currentWeek.WeekNumber - 1);
+        if (previousWeek != null && previousWeek.Phase != currentWeek.Phase)
+        {
+            return MessagingService.GetPhaseTransitionMessage(currentWeek.Phase);
+        }
+        return null;
+    }
+
+    private string? GetMilestoneMessage()
+    {
+        if (PlanState.ActivePlan == null) return null;
+        var completed = PlanState.ActivePlan.CompletedWorkouts;
+        var msg = MessagingService.GetMilestoneMessage(completed);
+        return string.IsNullOrEmpty(msg) ? null : msg;
+    }
+
+    private int CalculateStreak()
+    {
+        if (PlanState.ActivePlan == null) return 0;
+        var allWorkouts = PlanState.ActivePlan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Where(w => w.IsRunWorkout)
+            .OrderByDescending(w => w.Date)
+            .ToList();
+
+        int streak = 0;
+        foreach (var w in allWorkouts)
+        {
+            if (w.Date.Date > DateTime.Today) continue;
+            if (w.Status == WorkoutStatus.Completed) streak++;
+            else break;
+        }
+        return streak;
+    }
+
+    private bool IsPlanComplete()
+    {
+        if (PlanState.ActivePlan == null) return false;
+        var plan = PlanState.ActivePlan;
+        if (plan.Status == PlanStatus.Completed) return false; // already handled
+        var lastWorkoutDate = plan.Weeks.SelectMany(w => w.Workouts).Max(w => w.Date);
+        return lastWorkoutDate.Date < DateTime.Today;
+    }
+
+    private ScheduledWorkout? GetTodayWorkout() =>
+        PlanState.ActivePlan?.Weeks.SelectMany(w => w.Workouts).FirstOrDefault(w => w.Date.Date == DateTime.Today);
+
+    private async Task QuickCompleteTodayWidget(ScheduledWorkout workout)
+    {
+        var service = new WorkoutLoggingService();
+        service.QuickComplete(workout);
+        await WorkoutRepo.UpdateWorkoutAsync(workout);
+        StateHasChanged();
+    }
+
+    private void GoToToday()
+    {
+        selectedDate = DateTime.Today;
+        currentView = CalendarView.Daily;
+    }
+
+    private async Task HandlePause()
+    {
+        await PlanState.PausePlanAsync();
+    }
+
+    private async Task HandleResume()
+    {
+        await PlanState.ResumePlanAsync();
+    }
+
+    private async Task HandleAbandon()
+    {
+        showAbandonConfirm = false;
+        await PlanState.AbandonPlanAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task HandleVacationApplied((DateTime Start, DateTime End) range)
+    {
+        // Persist modified workouts
+        if (PlanState.ActivePlan != null)
+        {
+            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                         .Where(w => w.Date.Date >= range.Start.Date && w.Date.Date <= range.End.Date && w.Id > 0))
+            {
+                await WorkoutRepo.UpdateWorkoutAsync(workout);
+            }
+        }
+        showVacation = false;
+    }
+
+    private static string FormatBodyPart(BodyPart part) => part switch
+    {
+        BodyPart.ITBand => "IT Band",
+        _ => part.ToString()
+    };
+
     public void Dispose()
     {
         AuthState.OnAuthStateChanged -= HandleStateChanged;
-        PlanState.OnPlanChanged -= HandleStateChanged;
+        PlanState.OnPlanChanged -= HandlePlanChanged;
     }
 
     public enum CalendarView { Monthly, Weekly, Daily, Overview }

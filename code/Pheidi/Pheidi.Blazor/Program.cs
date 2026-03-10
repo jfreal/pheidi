@@ -29,6 +29,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<PlanRepository>();
 builder.Services.AddScoped<WorkoutRepository>();
 builder.Services.AddScoped<ICalExportService>();
+builder.Services.AddScoped<RacePredictionService>();
 
 var app = builder.Build();
 
@@ -99,6 +100,79 @@ app.MapGet("/api/shared/{token}", async (string token, AppDbContext db) =>
             })
         })
     });
+});
+
+// --- REST API endpoints ---
+
+// Active plan for a user
+app.MapGet("/api/plans/active", async (HttpContext http, AppDbContext db) =>
+{
+    var userId = http.Request.Headers["X-User-Id"].FirstOrDefault();
+    if (!int.TryParse(userId, out var uid)) return Results.Unauthorized();
+
+    var plan = await db.TrainingPlans
+        .Include(p => p.RaceGoal)
+        .Include(p => p.Weeks)
+            .ThenInclude(w => w.Workouts)
+        .Where(p => p.UserId == uid && p.Status == PlanStatus.Active)
+        .FirstOrDefaultAsync();
+
+    return plan == null ? Results.NotFound() : Results.Ok(plan);
+});
+
+// Complete a workout
+app.MapPost("/api/workouts/{id:int}/complete", async (int id, AppDbContext db) =>
+{
+    var workout = await db.ScheduledWorkouts.FindAsync(id);
+    if (workout == null) return Results.NotFound();
+
+    workout.Status = WorkoutStatus.Completed;
+    await db.SaveChangesAsync();
+    return Results.Ok(workout);
+});
+
+// Get/update user profile
+app.MapGet("/api/profile/{userId:int}", async (int userId, AppDbContext db) =>
+{
+    var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+    return profile == null ? Results.NotFound() : Results.Ok(profile);
+});
+
+app.MapPut("/api/profile/{userId:int}", async (int userId, UserProfile updated, AppDbContext db) =>
+{
+    var profile = await db.UserProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
+    if (profile == null) return Results.NotFound();
+
+    profile.ExperienceLevel = updated.ExperienceLevel;
+    profile.PacePreference = updated.PacePreference;
+    profile.VdotValue = updated.VdotValue;
+    profile.UseMiles = updated.UseMiles;
+    profile.AvailableDays = updated.AvailableDays;
+    profile.PreferredLongRunDay = updated.PreferredLongRunDay;
+    profile.CurrentWeeklyMileage = updated.CurrentWeeklyMileage;
+    profile.RunningExperienceMonths = updated.RunningExperienceMonths;
+
+    await db.SaveChangesAsync();
+    return Results.Ok(profile);
+});
+
+// Report injury
+app.MapPost("/api/injuries", async (InjuryReport report, AppDbContext db) =>
+{
+    db.InjuryReports.Add(report);
+    await db.SaveChangesAsync();
+    return Results.Created($"/api/injuries/{report.Id}", report);
+});
+
+// Get active injury for a user
+app.MapGet("/api/injuries/active/{userId:int}", async (int userId, AppDbContext db) =>
+{
+    var injury = await db.InjuryReports
+        .Include(r => r.PainHistory)
+        .Where(r => r.UserId == userId && r.Status == InjuryStatus.Active)
+        .FirstOrDefaultAsync();
+
+    return injury == null ? Results.NotFound() : Results.Ok(injury);
 });
 
 app.MapRazorComponents<App>()

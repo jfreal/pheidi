@@ -4,20 +4,29 @@
     <h6>Log Workout Details</h6>
 
     <div class="row g-2 mb-2">
-        <div class="col-4">
+        <div class="col-3">
             <label class="form-label small">Distance (mi)</label>
             <input type="number" class="form-control form-control-sm" step="0.1" min="0"
                    @bind="distance" @bind:event="oninput" placeholder="optional" />
         </div>
-        <div class="col-4">
+        <div class="col-3">
             <label class="form-label small">Time (min)</label>
             <input type="number" class="form-control form-control-sm" step="1" min="0"
                    @bind="durationMinutes" @bind:event="oninput" placeholder="optional" />
         </div>
-        <div class="col-4">
+        <div class="col-3">
             <label class="form-label small">Effort (1-10)</label>
             <input type="number" class="form-control form-control-sm" min="1" max="10"
                    @bind="effort" @bind:event="oninput" placeholder="optional" />
+        </div>
+        <div class="col-3">
+            <label class="form-label small">Completed %</label>
+            <select class="form-select form-select-sm" @bind="completionPercent">
+                <option value="100">100%</option>
+                <option value="75">75%</option>
+                <option value="50">50%</option>
+                <option value="25">25%</option>
+            </select>
         </div>
     </div>
 
@@ -48,6 +57,7 @@
     private decimal? distance;
     private int? durationMinutes;
     private int? effort;
+    private int completionPercent = 100;
     private bool submitted;
 
     protected override void OnInitialized()
@@ -60,6 +70,7 @@
         var service = new WorkoutLoggingService();
         var duration = durationMinutes.HasValue ? TimeSpan.FromMinutes(durationMinutes.Value) : (TimeSpan?)null;
         service.LogWorkout(Workout, distance, duration, effort);
+        Workout.CompletionPercent = completionPercent < 100 ? completionPercent : null;
         submitted = true;
         await OnLogged.InvokeAsync();
     }

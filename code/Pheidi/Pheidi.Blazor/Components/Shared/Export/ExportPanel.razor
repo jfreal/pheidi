@@ -41,6 +41,10 @@
             <button class="btn btn-outline-secondary" @onclick="PrintPlan">
                 <i class="fas fa-print me-2"></i>Print Plan
             </button>
+
+            <button class="btn btn-outline-info" @onclick="DownloadPdf">
+                <i class="fas fa-file-pdf me-2"></i>Download PDF
+            </button>
         </div>
     </div>
 </div>
@@ -92,5 +96,14 @@
     private async Task PrintPlan()
     {
         await JS.InvokeVoidAsync("window.print");
+    }
+
+    private async Task DownloadPdf()
+    {
+        var pdfService = new PdfExportService();
+        var bytes = pdfService.GeneratePdfBytes(Plan);
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("eval",
+            $"{{const a=document.createElement('a');a.href='data:text/html;base64,{base64}';a.download='training-plan.html';a.click();}}");
     }
 }

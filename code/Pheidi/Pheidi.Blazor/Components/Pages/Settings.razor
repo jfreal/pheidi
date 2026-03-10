@@ -1,0 +1,206 @@
+@page "/settings"
+@rendermode InteractiveServer
+@using Pheidi.Blazor.Services
+@using Pheidi.Common.Engines
+@inject AuthStateService AuthState
+@inject PlanStateService PlanState
+@inject UserService UserService
+@inject WorkoutRepository WorkoutRepo
+@inject NavigationManager Navigation
+
+<PageTitle>Pheidi - Settings</PageTitle>
+
+@if (!AuthState.IsAuthenticated)
+{
+    <div class="text-center mt-5">
+        <h4>Sign in to access settings</h4>
+        <a href="/signin" class="btn btn-primary"><i class="fas fa-user me-2"></i>Sign In</a>
+    </div>
+}
+else if (profile == null)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border" role="status"></div>
+        <p class="mt-2">Loading profile...</p>
+    </div>
+}
+else
+{
+    <div class="container" style="max-width: 600px;">
+        <h4 class="mt-3 mb-4"><i class="fas fa-cog me-2"></i>Settings</h4>
+
+        @if (saved)
+        {
+            <div class="alert alert-success py-2">
+                <i class="fas fa-check me-1"></i> Settings saved.
+            </div>
+        }
+
+        <div class="card mb-4">
+            <div class="card-header"><h6 class="mb-0">Experience & Preferences</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Experience Level</label>
+                    <select class="form-select" @bind="profile.ExperienceLevel">
+                        @foreach (var level in Enum.GetValues<ExperienceLevel>())
+                        {
+                            <option value="@level">@level</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Pace Guidance</label>
+                    <select class="form-select" @bind="profile.PacePreference">
+                        <option value="@PacePreference.RPE">RPE (Effort-Based)</option>
+                        <option value="@PacePreference.VDOT">VDOT (Pace-Based)</option>
+                    </select>
+                </div>
+
+                @if (profile.PacePreference == PacePreference.VDOT)
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">VDOT Value</label>
+                        <input type="number" class="form-control" step="0.1" min="20" max="85"
+                               @bind="profile.VdotValue" placeholder="e.g. 45" />
+                        <small class="text-muted">Calculated from a recent race time</small>
+                    </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Units</label>
+                    <select class="form-select" @bind="profile.UseMiles">
+                        <option value="true">Miles</option>
+                        <option value="false">Kilometers</option>
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Current Weekly Mileage</label>
+                        <input type="number" class="form-control" step="1" min="0" max="200"
+                               @bind="profile.CurrentWeeklyMileage" placeholder="optional" />
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Running Experience (months)</label>
+                        <input type="number" class="form-control" step="1" min="0"
+                               @bind="profile.RunningExperienceMonths" placeholder="optional" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header"><h6 class="mb-0">Schedule</h6></div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Available Days</label>
+                    <div class="d-flex gap-2 flex-wrap">
+                        @foreach (var day in allDays)
+                        {
+                            var d = day;
+                            var isSelected = selectedDays.Contains(d);
+                            <button class="btn btn-sm @(isSelected ? "btn-primary" : "btn-outline-secondary")"
+                                    @onclick="() => ToggleDay(d)">
+                                @d.ToString()[..3]
+                            </button>
+                        }
+                    </div>
+                    @if (selectedDays.Count < 3)
+                    {
+                        <small class="text-danger">Select at least 3 days</small>
+                    }
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Preferred Long Run Day</label>
+                    <select class="form-select" @bind="profile.PreferredLongRunDay">
+                        @foreach (var day in selectedDays)
+                        {
+                            <option value="@day">@day</option>
+                        }
+                    </select>
+                </div>
+
+                @if (PlanState.HasActivePlan)
+                {
+                    <div class="alert alert-info py-2">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Changing available days will automatically redistribute future workouts in your active plan.
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="d-flex gap-2 mb-4">
+            <button class="btn btn-primary" @onclick="Save" disabled="@(selectedDays.Count < 3)">
+                <i class="fas fa-save me-1"></i> Save Settings
+            </button>
+            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                Cancel
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private UserProfile? profile;
+    private List<DayOfWeek> selectedDays = new();
+    private bool saved;
+
+    private static readonly DayOfWeek[] allDays =
+    [
+        DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+        DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
+    ];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && AuthState.IsAuthenticated && AuthState.CurrentUser != null)
+        {
+            profile = await UserService.GetOrCreateProfileAsync(AuthState.CurrentUser.Id);
+            selectedDays = profile.AvailableDays.ToList();
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleDay(DayOfWeek day)
+    {
+        if (selectedDays.Contains(day))
+            selectedDays.Remove(day);
+        else
+            selectedDays.Add(day);
+    }
+
+    private async Task Save()
+    {
+        if (profile == null || selectedDays.Count < 3) return;
+
+        var oldDays = profile.AvailableDays;
+        profile.AvailableDays = selectedDays.OrderBy(d => d).ToArray();
+        await UserService.SaveProfileAsync(profile);
+
+        // Update PlanStateService so other components see the change
+        PlanState.UserProfile = profile;
+
+        // Reflow remaining weeks if available days changed and there's an active plan
+        if (PlanState.HasActivePlan && !oldDays.SequenceEqual(profile.AvailableDays))
+        {
+            var engine = new ScheduleFlexibilityEngine();
+            engine.ReflowRemainingWeeks(PlanState.ActivePlan!, profile.AvailableDays);
+
+            // Persist modified workouts
+            foreach (var workout in PlanState.ActivePlan!.Weeks.SelectMany(w => w.Workouts)
+                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
+            {
+                await WorkoutRepo.UpdateWorkoutAsync(workout);
+            }
+        }
+
+        saved = true;
+        await Task.Delay(2000);
+        saved = false;
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/calendar");
+}
