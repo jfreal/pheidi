@@ -1,17 +1,123 @@
 @using Pheidi.Blazor.Components.Shared
 @using Pheidi.Blazor.Components.Shared.Export
 @using Pheidi.Blazor.Services
+@using Pheidi.Common.Engines
 @using Pheidi.Common.Services
 @inject WorkoutRepository WorkoutRepo
 @inject RacePredictionService RacePrediction
 @inject AuthStateService AuthState
+@inject ScheduleFlexibilityEngine FlexEngine
 
 <div class="d-flex gap-3 mb-3 flex-wrap">
-    <span><span class="badge" style="background-color: #81C784;">&nbsp;</span> Base</span>
-    <span><span class="badge" style="background-color: #FFB74D;">&nbsp;</span> Build</span>
-    <span><span class="badge" style="background-color: #E57373;">&nbsp;</span> Peak</span>
-    <span><span class="badge" style="background-color: #64B5F6;">&nbsp;</span> Taper</span>
+    <span><span class="badge" style="background-color: #A5D6A7;">&nbsp;</span> Base</span>
+    <span><span class="badge" style="background-color: #FFCC80;">&nbsp;</span> Build</span>
+    <span><span class="badge" style="background-color: #EF9A9A;">&nbsp;</span> Peak</span>
+    <span><span class="badge" style="background-color: #90CAF9;">&nbsp;</span> Taper</span>
+    <span><span class="badge" style="background-color: #E1F5FE;">&nbsp;</span> <i class="fas fa-umbrella-beach" style="font-size: 0.7rem;"></i> Vacation</span>
+    <span><span class="badge" style="background-color: #FFEBEE;">&nbsp;</span> <i class="fas fa-band-aid" style="font-size: 0.7rem;"></i> Injury</span>
+    <span><span class="badge" style="background-color: #F5F5F5; border: 1px solid #ddd;">&nbsp;</span> <i class="fas fa-ban" style="font-size: 0.7rem;"></i> Day Off</span>
 </div>
+
+@* --- Start / Race date inline edit --- *@
+<div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+    <span class="text-muted small">Start:</span>
+    <span class="fw-semibold">@PlanStartDate.ToString("MMM d, yyyy")</span>
+    <button class="btn btn-sm btn-link text-muted p-0" @onclick="StartEditingStartDate" title="Adjust weeks / start date">
+        <i class="fas fa-pen" style="font-size: 0.7rem;"></i>
+    </button>
+
+    <span class="text-muted small ms-3">Race:</span>
+    @if (_editingRaceDate)
+    {
+        <input type="date" class="form-control form-control-sm" style="width: 160px;"
+               @bind="_newRaceDate" min="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" />
+        <button class="btn btn-sm btn-primary py-0 px-2" @onclick="ApplyRaceDateChange">
+            <i class="fas fa-check"></i>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary py-0 px-2" @onclick="() => _editingRaceDate = false">
+            <i class="fas fa-times"></i>
+        </button>
+    }
+    else
+    {
+        <span class="fw-semibold">@Plan.RaceGoal.RaceDate.ToString("MMM d, yyyy")</span>
+        <button class="btn btn-sm btn-link text-muted p-0" @onclick="StartEditingRaceDate" title="Change race date">
+            <i class="fas fa-pen" style="font-size: 0.7rem;"></i>
+        </button>
+    }
+
+    <span class="text-muted small ms-3">@Plan.TotalWeeks wks</span>
+</div>
+
+@if (_editingStartDate)
+{
+    var distance = Plan.RaceGoal.Distance;
+    var (recMin, recMax) = distance.PlanWeekRange();
+    var recDefault = distance.DefaultPlanWeeks();
+    var maxAvailableWeeks = (int)((Plan.RaceGoal.RaceDate - DateTime.Today).TotalDays / 7);
+    var calculatedStart = Plan.RaceGoal.RaceDate.AddDays(-7 * _selectedWeeks);
+
+    <div class="card mb-3" style="max-width: 480px;">
+        <div class="card-body py-2">
+            <div class="d-flex align-items-center gap-2 mb-2">
+                <label class="form-label small fw-semibold mb-0">Weeks:</label>
+                <input type="number" class="form-control form-control-sm" style="width: 70px;"
+                       min="@recMin" max="@Math.Min(recMax + 4, maxAvailableWeeks)"
+                       @bind="_selectedWeeks" @bind:event="oninput" />
+                <span class="text-muted small">Start: @calculatedStart.ToString("MMM d, yyyy")</span>
+            </div>
+
+            <div class="d-flex gap-1 mb-2 flex-wrap">
+                @foreach (var w in Enumerable.Range(recMin, recMax - recMin + 1))
+                {
+                    var weeks = w;
+                    <button class="btn btn-sm @(weeks == _selectedWeeks ? "btn-primary" : "btn-outline-secondary") py-0 px-2"
+                            @onclick="() => _selectedWeeks = weeks"
+                            disabled="@(weeks > maxAvailableWeeks)">
+                        @weeks
+                        @if (weeks == recDefault) { <text> ★</text> }
+                    </button>
+                }
+            </div>
+
+            <div class="small text-muted mb-2">
+                <i class="fas fa-info-circle me-1"></i>
+                @distance.DisplayName(): @recMin–@recMax weeks recommended (★ = @recDefault wk default)
+            </div>
+
+            @if (_selectedWeeks < recMin)
+            {
+                <div class="small text-warning mb-2">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    @(_selectedWeeks) weeks is below the recommended minimum of @recMin for a @distance.DisplayName(). You may not be adequately prepared.
+                </div>
+            }
+            else if (_selectedWeeks > recMax)
+            {
+                <div class="small text-info mb-2">
+                    <i class="fas fa-info-circle me-1"></i>
+                    @(_selectedWeeks) weeks exceeds the typical @recMax week max. Extra time can help if you're building from a low base.
+                </div>
+            }
+
+            @if (_selectedWeeks > maxAvailableWeeks)
+            {
+                <div class="small text-danger mb-2">
+                    <i class="fas fa-times-circle me-1"></i>
+                    Only @maxAvailableWeeks weeks until race day.
+                </div>
+            }
+
+            <div class="d-flex gap-2 justify-content-end">
+                <button class="btn btn-sm btn-outline-secondary" @onclick="() => _editingStartDate = false">Cancel</button>
+                <button class="btn btn-sm btn-primary" @onclick="ApplyWeekCountChange"
+                        disabled="@(_selectedWeeks < 4 || _selectedWeeks > maxAvailableWeeks)">
+                    Apply
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 <div class="row g-3 mb-4">
     <div class="col-6 col-md-3">
@@ -75,6 +181,7 @@ else
         <thead class="table-light">
             <tr>
                 <th style="width: 50px;">Wk</th>
+                <th style="width: 80px;">Dates</th>
                 @foreach (var day in weekDays)
                 {
                     <th class="text-center">@day.ToString()[..3]</th>
@@ -95,12 +202,32 @@ else
                             <i class="fas fa-caret-left text-primary"></i>
                         }
                     </td>
+                    <td class="small">
+                        @if (week.Workouts.Count > 0)
+                        {
+                            <a href="#" class="text-decoration-none" @onclick="() => NavigateToWeek(week)" @onclick:preventDefault>
+                                @week.WeekStartDate.ToString("M/d")
+                            </a>
+                        }
+                    </td>
                     @foreach (var day in weekDays)
                     {
                         var workout = week.Workouts.FirstOrDefault(w => w.Date.DayOfWeek == day);
                         <td class="text-center p-1 workout-cell"
                             @onclick="@(() => { if (workout != null) OpenEdit(workout); })">
-                            @if (workout != null && workout.Type != WorkoutType.Rest)
+                            @if (workout != null && workout.Modifier != WorkoutModifier.None)
+                            {
+                                <div>
+                                    <span class="badge d-block mb-0" style="background-color: @WorkoutColors.GetModifier(workout.Modifier); color: @WorkoutColors.GetModifierText(workout.Modifier); font-size: 0.7rem;">
+                                        <i class="@WorkoutColors.GetModifierIcon(workout.Modifier) me-1" style="font-size: 0.6rem;"></i>@ModifierLabel(workout.Modifier)
+                                    </span>
+                                    @if (workout.TargetDistanceMiles > 0)
+                                    {
+                                        <small class="text-muted">@workout.TargetDistanceMiles.ToString("F1")</small>
+                                    }
+                                </div>
+                            }
+                            else if (workout != null && workout.Type != WorkoutType.Rest)
                             {
                                 <div>
                                     <span class="badge d-block mb-0" style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type); font-size: 0.7rem;">
@@ -120,79 +247,9 @@ else
         </tbody>
         <tfoot>
             <tr class="table-light fw-bold">
-                <td>Total</td>
+                <td colspan="2">Total</td>
                 <td colspan="7"></td>
                 <td class="text-end">@Plan.TotalPlannedMiles.ToString("F1")</td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
-
-<h5 class="mt-4 mb-3">Weekly Summary</h5>
-<div class="table-responsive">
-    <table class="table table-sm table-hover">
-        <thead class="table-light">
-            <tr>
-                <th>Week</th>
-                <th>Phase</th>
-                <th>Dates</th>
-                <th>Long Run</th>
-                <th>Key Workout</th>
-                <th class="text-end">Total Miles</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var week in Plan.Weeks)
-            {
-                var isCurrentWeek = week == Plan.CurrentWeek;
-                <tr class="@(isCurrentWeek ? "table-active fw-bold" : "")"
-                    style="border-left: 4px solid @PhaseColor(week.Phase);">
-                    <td>@week.WeekNumber</td>
-                    <td>
-                        <span class="badge" style="background-color: @PhaseColor(week.Phase); color: #fff;">
-                            @week.Phase
-                        </span>
-                    </td>
-                    <td>
-                        @if (week.Workouts.Count > 0)
-                        {
-                            @week.WeekStartDate.ToString("MMM d")
-                        }
-                    </td>
-                    <td>
-                        @if (week.LongRunDistance > 0)
-                        {
-                            <span class="fw-bold">@week.LongRunDistance.ToString("F1") mi</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">—</span>
-                        }
-                    </td>
-                    <td>
-                        @{
-                            var keyWorkout = week.Workouts.FirstOrDefault(w => w.IsQualityWorkout);
-                        }
-                        @if (keyWorkout != null)
-                        {
-                            <span class="badge" style="background-color: @WorkoutColors.Get(keyWorkout.Type); color: @WorkoutColors.GetText(keyWorkout.Type);">
-                                @keyWorkout.Type
-                            </span>
-                            <span class="small">@keyWorkout.TargetDistanceMiles.ToString("F1") mi</span>
-                        }
-                        else
-                        {
-                            <span class="text-muted">—</span>
-                        }
-                    </td>
-                    <td class="text-end">@week.TotalPlannedDistance.ToString("F1")</td>
-                </tr>
-            }
-        </tbody>
-        <tfoot>
-            <tr class="fw-bold">
-                <td colspan="5">Total</td>
-                <td class="text-end">@Plan.TotalPlannedMiles.ToString("F1") mi</td>
             </tr>
         </tfoot>
     </table>
@@ -202,6 +259,7 @@ else
     <ExportPanel Plan="Plan" UserShareToken="@(AuthState.CurrentUser?.ShareToken ?? "")" />
 </div>
 
+@* --- Edit / vacation popover --- *@
 @if (_editTarget != null)
 {
     <div class="position-fixed top-0 start-0 w-100 h-100"
@@ -209,34 +267,79 @@ else
          @onclick="CancelEdit"></div>
 
     <div class="position-fixed top-50 start-50 translate-middle card shadow"
-         style="z-index: 1050; width: 280px;"
+         style="z-index: 1050; width: 300px;"
          @onclick:stopPropagation="true">
         <div class="card-body">
             <h6 class="card-title mb-3">
-                Edit &mdash; @_editTarget.Date.ToString("ddd MMM d")
+                @_editTarget.Date.ToString("ddd MMM d")
             </h6>
 
-            <div class="mb-3">
-                <label class="form-label small fw-semibold">Type</label>
-                <select class="form-select form-select-sm" @bind="_editType">
-                    @foreach (var wt in Enum.GetValues<WorkoutType>())
-                    {
-                        <option value="@wt">@wt</option>
-                    }
-                </select>
-            </div>
+            @if (!_showVacationRange)
+            {
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Type</label>
+                    <select class="form-select form-select-sm" @bind="_editType">
+                        @foreach (var wt in Enum.GetValues<WorkoutType>())
+                        {
+                            <option value="@wt">@wt</option>
+                        }
+                    </select>
+                </div>
 
-            <div class="mb-3">
-                <label class="form-label small fw-semibold">Distance (miles)</label>
-                <input type="number" class="form-control form-control-sm"
-                       step="0.1" min="0" max="50"
-                       @bind="_editDistance" @bind:event="oninput" />
-            </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Distance (miles)</label>
+                    <input type="number" class="form-control form-control-sm"
+                           step="0.1" min="0" max="50"
+                           @bind="_editDistance" @bind:event="oninput" />
+                </div>
 
-            <div class="d-flex gap-2 justify-content-end">
-                <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
-                <button class="btn btn-sm btn-primary" @onclick="SaveEdit">Save</button>
-            </div>
+                <div class="d-flex gap-2 justify-content-between">
+                    <div class="d-flex gap-1">
+                        <button class="btn btn-sm btn-outline-info" @onclick="MarkDayOff" title="Day off (rest)">
+                            <i class="fas fa-ban me-1"></i>Day Off
+                        </button>
+                        <button class="btn btn-sm btn-outline-info" @onclick="() => _showVacationRange = true" title="Vacation range">
+                            <i class="fas fa-umbrella-beach me-1"></i>Vacation
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" @onclick="CancelEdit">Cancel</button>
+                        <button class="btn btn-sm btn-primary" @onclick="SaveEdit">Save</button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Vacation range</label>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <input type="date" class="form-control form-control-sm" @bind="_vacStart" />
+                        </div>
+                        <div class="col-6">
+                            <input type="date" class="form-control form-control-sm" @bind="_vacEnd" />
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="vacRest" checked="@_vacFullRest" @onchange="() => _vacFullRest = true" />
+                        <label class="form-check-label small" for="vacRest">Full rest</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" id="vacLight" checked="@(!_vacFullRest)" @onchange="() => _vacFullRest = false" />
+                        <label class="form-check-label small" for="vacLight">Light (50%)</label>
+                    </div>
+                </div>
+                @if (_vacEnd < _vacStart)
+                {
+                    <small class="text-danger">End date must be after start date.</small>
+                }
+                <div class="d-flex gap-2 justify-content-end">
+                    <button class="btn btn-sm btn-outline-secondary" @onclick="() => _showVacationRange = false">Back</button>
+                    <button class="btn btn-sm btn-primary" @onclick="ApplyVacation" disabled="@(_vacEnd < _vacStart)">Apply</button>
+                </div>
+            }
         </div>
     </div>
 }
@@ -245,19 +348,85 @@ else
     [Parameter, EditorRequired]
     public NewTrainingPlan Plan { get; set; } = default!;
 
+    [Parameter]
+    public EventCallback<DateTime> OnNavigateToWeek { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateTime Start, DateTime End)> OnVacationApplied { get; set; }
+
+    [Parameter]
+    public EventCallback<(DateTime RaceDate, int? CustomWeeks)> OnPlanDatesChanged { get; set; }
+
     private static readonly DayOfWeek[] weekDays =
     [
         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
         DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday
     ];
 
+    private DateTime PlanStartDate => Plan.Weeks.Count > 0 ? Plan.Weeks[0].WeekStartDate : DateTime.Today;
+
+    // --- Start date / week count editing ---
+    private bool _editingStartDate;
+    private int _selectedWeeks;
+
+    private void StartEditingStartDate()
+    {
+        _selectedWeeks = Plan.TotalWeeks;
+        _editingStartDate = true;
+    }
+
+    private async Task ApplyWeekCountChange()
+    {
+        _editingStartDate = false;
+        if (_selectedWeeks == Plan.TotalWeeks) return;
+        await OnPlanDatesChanged.InvokeAsync((Plan.RaceGoal.RaceDate, _selectedWeeks));
+    }
+
+    // --- Race date editing ---
+    private bool _editingRaceDate;
+    private DateTime _newRaceDate;
+
+    private void StartEditingRaceDate()
+    {
+        _newRaceDate = Plan.RaceGoal.RaceDate;
+        _editingRaceDate = true;
+    }
+
+    private async Task ApplyRaceDateChange()
+    {
+        _editingRaceDate = false;
+        if (_newRaceDate == Plan.RaceGoal.RaceDate) return;
+        // Auto-calculate weeks from today to the new race date
+        var weeksAvailable = (int)((_newRaceDate - DateTime.Today).TotalDays / 7);
+        var (min, max) = Plan.RaceGoal.Distance.PlanWeekRange();
+        var customWeeks = Math.Clamp(weeksAvailable, min, max);
+        await OnPlanDatesChanged.InvokeAsync((_newRaceDate, customWeeks));
+    }
+
+    // --- Navigation ---
+    private async Task NavigateToWeek(TrainingWeek week)
+    {
+        await OnNavigateToWeek.InvokeAsync(week.WeekStartDate);
+    }
+
+    // --- Edit popover state ---
+    private ScheduledWorkout? _editTarget;
+    private WorkoutType _editType;
+    private decimal _editDistance;
+
+    // --- Vacation from grid ---
+    private bool _showVacationRange;
+    private DateTime _vacStart;
+    private DateTime _vacEnd;
+    private bool _vacFullRest = true;
+
     private static string PhaseColor(TrainingPhase phase) => phase switch
     {
-        TrainingPhase.Base => "#81C784",
-        TrainingPhase.Build => "#FFB74D",
-        TrainingPhase.Peak => "#E57373",
-        TrainingPhase.Taper => "#64B5F6",
-        _ => "#BDBDBD"
+        TrainingPhase.Base => "#A5D6A7",
+        TrainingPhase.Build => "#FFCC80",
+        TrainingPhase.Peak => "#EF9A9A",
+        TrainingPhase.Taper => "#90CAF9",
+        _ => "#E0E0E0"
     };
 
     private static string ShortType(WorkoutType type) => type switch
@@ -275,27 +444,72 @@ else
         _ => type.ToString()
     };
 
-    // --- Edit popover state ---
-    private ScheduledWorkout? _editTarget;
-    private WorkoutType _editType;
-    private decimal _editDistance;
+    private static string ModifierLabel(WorkoutModifier mod) => mod switch
+    {
+        WorkoutModifier.Vacation => "Vac",
+        WorkoutModifier.InjuryReduced => "Inj",
+        WorkoutModifier.DayOff => "Off",
+        _ => ""
+    };
 
     private void OpenEdit(ScheduledWorkout workout)
     {
         _editTarget = workout;
         _editType = workout.Type;
         _editDistance = workout.TargetDistanceMiles;
+        _showVacationRange = false;
+        _vacStart = workout.Date;
+        _vacEnd = workout.Date.AddDays(6);
+        _vacFullRest = true;
     }
 
-    private void CancelEdit() => _editTarget = null;
+    private void CancelEdit()
+    {
+        _editTarget = null;
+        _showVacationRange = false;
+    }
 
     private async Task SaveEdit()
     {
         if (_editTarget == null) return;
         _editTarget.Type = _editType;
         _editTarget.TargetDistanceMiles = _editType == WorkoutType.Rest ? 0 : _editDistance;
+        if (_editType == WorkoutType.Rest)
+        {
+            _editTarget.PaceZone = null;
+            _editTarget.WarmUpDuration = null;
+            _editTarget.CoolDownDuration = null;
+        }
+        _editTarget.Modifier = WorkoutModifier.None;
         await WorkoutRepo.UpdateWorkoutAsync(_editTarget);
         _editTarget = null;
+    }
+
+    private async Task MarkDayOff()
+    {
+        if (_editTarget == null) return;
+        _editTarget.Type = WorkoutType.Rest;
+        _editTarget.TargetDistanceMiles = 0;
+        _editTarget.PaceZone = null;
+        _editTarget.WarmUpDuration = null;
+        _editTarget.CoolDownDuration = null;
+        _editTarget.Modifier = WorkoutModifier.DayOff;
+        await WorkoutRepo.UpdateWorkoutAsync(_editTarget);
+        _editTarget = null;
+    }
+
+    private async Task ApplyVacation()
+    {
+        if (_editTarget == null) return;
+        FlexEngine.HandleVacation(Plan, _vacStart, _vacEnd, true, _vacFullRest);
+
+        var affectedWorkouts = Plan.Weeks.SelectMany(w => w.Workouts)
+            .Where(w => w.Date.Date >= _vacStart.Date && w.Date.Date <= _vacEnd.Date && w.Id > 0).ToList();
+        await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
+
+        _editTarget = null;
+        _showVacationRange = false;
+        await OnVacationApplied.InvokeAsync((_vacStart, _vacEnd));
     }
 
     private static string FormatTime(TimeSpan time) =>

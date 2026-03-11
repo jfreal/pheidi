@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.JSInterop;
 using Pheidi.Blazor.Data;
 using Pheidi.Common.Models;
 
@@ -76,7 +77,16 @@ public class AuthStateService
         if (OnAuthStateChanged != null)
         {
             foreach (var handler in OnAuthStateChanged.GetInvocationList().Cast<Func<Task>>())
-                await handler();
+            {
+                try
+                {
+                    await handler();
+                }
+                catch (JSDisconnectedException)
+                {
+                    // Circuit disposed — safe to ignore
+                }
+            }
         }
     }
 

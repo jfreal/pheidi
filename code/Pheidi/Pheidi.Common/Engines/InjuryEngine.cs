@@ -21,6 +21,8 @@ public class InjuryEngine
     /// </summary>
     public static void ModifyWorkout(ScheduledWorkout workout, int severity)
     {
+        workout.Modifier = WorkoutModifier.InjuryReduced;
+
         if (severity <= 3)
         {
             // Mild: reduce distance by 20%

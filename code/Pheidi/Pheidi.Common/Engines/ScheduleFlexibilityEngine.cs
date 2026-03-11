@@ -230,6 +230,8 @@ public class ScheduleFlexibilityEngine
                 if (workout.Date.Date < startDate.Date || workout.Date.Date > endDate.Date)
                     continue;
 
+                workout.Modifier = WorkoutModifier.Vacation;
+
                 if (fullRest)
                 {
                     workout.Type = WorkoutType.Rest;
@@ -248,6 +250,12 @@ public class ScheduleFlexibilityEngine
                         workout.PaceZone = PaceZone.ForWorkoutType(WorkoutType.Easy);
                         workout.WarmUpDuration = null;
                         workout.CoolDownDuration = null;
+                    }
+                    else
+                    {
+                        workout.Type = WorkoutType.Rest;
+                        workout.TargetDistanceMiles = 0;
+                        workout.PaceZone = null;
                     }
                 }
             }

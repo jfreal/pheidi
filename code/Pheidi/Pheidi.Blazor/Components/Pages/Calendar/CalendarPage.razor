@@ -221,7 +221,10 @@ else
                        OnWorkoutChanged="StateHasChanged" />
             break;
         case CalendarView.Overview:
-            <PlanOverviewView Plan="PlanState.ActivePlan" />
+            <PlanOverviewView Plan="PlanState.ActivePlan"
+                              OnNavigateToWeek="HandleNavigateToWeek"
+                              OnVacationApplied="HandleVacationApplied"
+                              OnPlanDatesChanged="HandlePlanDatesChanged" />
             break;
     }
 
@@ -301,6 +304,23 @@ else
                             <i class="fas fa-check me-1"></i>Saved — plan updated.
                         </div>
                     }
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <label class="form-label fw-semibold small">Race Date</label>
+                            <input type="date" class="form-control form-control-sm"
+                                   @bind="settingsRaceDate" min="@DateTime.Today.AddDays(7).ToString("yyyy-MM-dd")" />
+                        </div>
+                        <div class="col-5">
+                            <label class="form-label fw-semibold small">Distance</label>
+                            <select class="form-select form-select-sm" @bind="settingsDistance">
+                                @foreach (var dist in Enum.GetValues<RaceDistance>())
+                                {
+                                    <option value="@dist">@dist.DisplayName()</option>
+                                }
+                            </select>
+                        </div>
+                    </div>
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Experience Level</label>
@@ -408,6 +428,8 @@ else
     private UserProfile? settingsProfile;
     private List<DayOfWeek> settingsSelectedDays = new();
     private bool settingsSaved;
+    private DateTime settingsRaceDate;
+    private RaceDistance settingsDistance;
     private static readonly DayOfWeek[] settingsAllDays =
     [
         DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
@@ -451,11 +473,9 @@ else
         if (PlanState.ActivePlan != null)
         {
             InjuryEngine.ApplyToFutureWorkouts(PlanState.ActivePlan, report.Severity);
-            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
-                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
-            {
-                await WorkoutRepo.UpdateWorkoutAsync(workout);
-            }
+            var affectedWorkouts = PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0).ToList();
+            await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
         }
 
         activeInjury = report;
@@ -479,11 +499,9 @@ else
         if (PlanState.ActivePlan != null)
         {
             InjuryEngine.ApplyToFutureWorkouts(PlanState.ActivePlan, updateSeverity);
-            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
-                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
-            {
-                await WorkoutRepo.UpdateWorkoutAsync(workout);
-            }
+            var affectedWorkouts = PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0).ToList();
+            await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
         }
 
         showUpdateInjury = false;
@@ -502,11 +520,9 @@ else
             if (currentWeek != null)
             {
                 InjuryEngine.ApplyReturnProgression(PlanState.ActivePlan, currentWeek.WeekNumber);
-                foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
-                             .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
-                {
-                    await WorkoutRepo.UpdateWorkoutAsync(workout);
-                }
+                var affectedWorkouts = PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                    .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0).ToList();
+                await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
             }
         }
 
@@ -579,6 +595,21 @@ else
         currentView = CalendarView.Daily;
     }
 
+    private void HandleNavigateToWeek(DateTime weekStart)
+    {
+        selectedDate = weekStart;
+        currentView = CalendarView.Weekly;
+    }
+
+    private async Task HandlePlanDatesChanged((DateTime RaceDate, int? CustomWeeks) args)
+    {
+        if (PlanState.ActivePlan?.RaceGoal == null) return;
+        PlanState.RaceGoal.RaceDate = args.RaceDate;
+        PlanState.RaceGoal.Distance = PlanState.ActivePlan.RaceGoal.Distance;
+        PlanState.RaceGoal.CustomPlanWeeks = args.CustomWeeks;
+        await PlanState.GeneratePlanAsync();
+    }
+
     private async Task HandlePause()
     {
         await PlanState.PausePlanAsync();
@@ -601,11 +632,9 @@ else
         // Persist modified workouts
         if (PlanState.ActivePlan != null)
         {
-            foreach (var workout in PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
-                         .Where(w => w.Date.Date >= range.Start.Date && w.Date.Date <= range.End.Date && w.Id > 0))
-            {
-                await WorkoutRepo.UpdateWorkoutAsync(workout);
-            }
+            var affectedWorkouts = PlanState.ActivePlan.Weeks.SelectMany(w => w.Workouts)
+                .Where(w => w.Date.Date >= range.Start.Date && w.Date.Date <= range.End.Date && w.Id > 0).ToList();
+            await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
         }
         showVacation = false;
     }
@@ -617,6 +646,12 @@ else
             settingsProfile = await UserService.GetOrCreateProfileAsync(AuthState.CurrentUser.Id);
             settingsSelectedDays = settingsProfile.AvailableDays.ToList();
             settingsSaved = false;
+
+            if (PlanState.ActivePlan?.RaceGoal != null)
+            {
+                settingsRaceDate = PlanState.ActivePlan.RaceGoal.RaceDate;
+                settingsDistance = PlanState.ActivePlan.RaceGoal.Distance;
+            }
         }
         showSettings = true;
     }
@@ -639,16 +674,25 @@ else
 
         PlanState.UpdateUserProfile(settingsProfile);
 
-        // Reflow if days changed
-        if (PlanState.HasActivePlan && !oldDays.SequenceEqual(settingsProfile.AvailableDays))
+        var raceGoalChanged = PlanState.ActivePlan?.RaceGoal != null &&
+            (PlanState.ActivePlan.RaceGoal.RaceDate != settingsRaceDate ||
+             PlanState.ActivePlan.RaceGoal.Distance != settingsDistance);
+
+        if (raceGoalChanged && PlanState.HasActivePlan)
         {
+            // Race date or distance changed — regenerate the entire plan
+            PlanState.RaceGoal.RaceDate = settingsRaceDate;
+            PlanState.RaceGoal.Distance = settingsDistance;
+            await PlanState.GeneratePlanAsync();
+        }
+        else if (PlanState.HasActivePlan && !oldDays.SequenceEqual(settingsProfile.AvailableDays))
+        {
+            // Only days changed — reflow existing plan
             FlexEngine.ReflowRemainingWeeks(PlanState.ActivePlan!, settingsProfile.AvailableDays);
 
-            foreach (var workout in PlanState.ActivePlan!.Weeks.SelectMany(w => w.Workouts)
-                         .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0))
-            {
-                await WorkoutRepo.UpdateWorkoutAsync(workout);
-            }
+            var affectedWorkouts = PlanState.ActivePlan!.Weeks.SelectMany(w => w.Workouts)
+                .Where(w => w.Date.Date >= DateTime.Today && w.Id > 0).ToList();
+            await WorkoutRepo.UpdateWorkoutsBatchAsync(affectedWorkouts);
         }
 
         settingsSaved = true;

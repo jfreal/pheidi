@@ -37,7 +37,20 @@
                 <div class="col calendar-day @(isToday ? "today" : "") @(!isCurrentMonth ? "other-month" : "") @(isSelected ? "selected" : "")"
                      @onclick="() => SelectDate(d)">
                     <div class="day-number @(isToday ? "fw-bold" : "")">@d.Day</div>
-                    @if (workout != null && workout.Type != WorkoutType.Rest)
+                    @if (workout != null && workout.Modifier != WorkoutModifier.None)
+                    {
+                        <div class="workout-badge" style="background-color: @WorkoutColors.GetModifier(workout.Modifier);">
+                            <small style="color: @WorkoutColors.GetModifierText(workout.Modifier);">
+                                <i class="@WorkoutColors.GetModifierIcon(workout.Modifier)" style="font-size: 0.6rem;"></i>
+                                @(workout.Modifier switch { WorkoutModifier.Vacation => "Vac", WorkoutModifier.DayOff => "Off", _ => "Inj" })
+                            </small>
+                        </div>
+                        @if (workout.TargetDistanceMiles > 0)
+                        {
+                            <div class="workout-distance small">@workout.TargetDistanceMiles.ToString("F1") mi</div>
+                        }
+                    }
+                    else if (workout != null && workout.Type != WorkoutType.Rest)
                     {
                         <div class="workout-badge" style="background-color: @WorkoutColors.Get(workout.Type);">
                             <small>@WorkoutShortName(workout.Type)</small>

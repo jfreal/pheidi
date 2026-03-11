@@ -1,3 +1,4 @@
+using Microsoft.JSInterop;
 using Pheidi.Common.Engines;
 using Pheidi.Common.Models;
 
@@ -44,6 +45,14 @@ public class PlanStateService
         // Archive existing active plans
         await _planRepo.ArchiveActivePlansAsync(_auth.CurrentUser.Id);
 
+        // Persist user profile settings from onboarding
+        UserProfile.UserId = _auth.CurrentUser.Id;
+        await _userService.SaveProfileAsync(UserProfile);
+
+        // Reset RaceGoal Id so EF creates a new row instead of
+        // trying to INSERT with the old plan's RaceGoal Id
+        RaceGoal.Id = 0;
+
         ActivePlan = _engine.Generate(RaceGoal, UserProfile);
         ActivePlan.UserId = _auth.CurrentUser.Id;
         await _planRepo.SavePlanAsync(ActivePlan);
@@ -89,7 +98,16 @@ public class PlanStateService
         if (OnPlanChanged != null)
         {
             foreach (var handler in OnPlanChanged.GetInvocationList().Cast<Func<Task>>())
-                await handler();
+            {
+                try
+                {
+                    await handler();
+                }
+                catch (JSDisconnectedException)
+                {
+                    // Circuit disposed — safe to ignore
+                }
+            }
         }
     }
 }

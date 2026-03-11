@@ -29,7 +29,24 @@ public class WorkoutRepository
     public async Task UpdateWorkoutAsync(ScheduledWorkout workout)
     {
         using var db = await _dbFactory.CreateDbContextAsync();
-        db.ScheduledWorkouts.Update(workout);
+        var existing = await db.ScheduledWorkouts.FindAsync(workout.Id);
+        if (existing == null) return;
+
+        db.Entry(existing).CurrentValues.SetValues(workout);
+
+        // Handle owned PaceZone manually — SetValues doesn't cover owned types
+        if (workout.PaceZone != null)
+        {
+            if (existing.PaceZone != null)
+                db.Entry(existing.PaceZone).CurrentValues.SetValues(workout.PaceZone);
+            else
+                existing.PaceZone = workout.PaceZone.Clone();
+        }
+        else
+        {
+            existing.PaceZone = null;
+        }
+
         await db.SaveChangesAsync();
     }
 
@@ -59,7 +76,54 @@ public class WorkoutRepository
         }
         else
         {
-            db.InjuryReports.Update(report);
+            var existing = await db.InjuryReports
+                .Include(r => r.PainHistory)
+                .FirstOrDefaultAsync(r => r.Id == report.Id);
+            if (existing != null)
+            {
+                db.Entry(existing).CurrentValues.SetValues(report);
+
+                // Add any new PainEntry items not yet in the database
+                foreach (var entry in report.PainHistory)
+                {
+                    if (entry.Id == 0)
+                        existing.PainHistory.Add(new PainEntry
+                        {
+                            Severity = entry.Severity,
+                            Date = entry.Date,
+                            InjuryReportId = existing.Id
+                        });
+                }
+            }
+            else
+            {
+                db.InjuryReports.Add(report);
+            }
+        }
+        await db.SaveChangesAsync();
+    }
+
+    public async Task UpdateWorkoutsBatchAsync(IEnumerable<ScheduledWorkout> workouts)
+    {
+        using var db = await _dbFactory.CreateDbContextAsync();
+        foreach (var workout in workouts)
+        {
+            var existing = await db.ScheduledWorkouts.FindAsync(workout.Id);
+            if (existing == null) continue;
+
+            db.Entry(existing).CurrentValues.SetValues(workout);
+
+            if (workout.PaceZone != null)
+            {
+                if (existing.PaceZone != null)
+                    db.Entry(existing.PaceZone).CurrentValues.SetValues(workout.PaceZone);
+                else
+                    existing.PaceZone = workout.PaceZone.Clone();
+            }
+            else
+            {
+                existing.PaceZone = null;
+            }
         }
         await db.SaveChangesAsync();
     }

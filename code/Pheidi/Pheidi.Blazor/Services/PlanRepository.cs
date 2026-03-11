@@ -40,7 +40,11 @@ public class PlanRepository
         }
         else
         {
-            db.TrainingPlans.Update(plan);
+            // Attach the detached entity and mark only the root as modified
+            // to avoid FK issues with owned types (PaceZone) in child entities
+            var existing = await db.TrainingPlans.FindAsync(plan.Id);
+            if (existing != null)
+                db.Entry(existing).CurrentValues.SetValues(plan);
         }
         await db.SaveChangesAsync();
     }

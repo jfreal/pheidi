@@ -36,6 +36,36 @@
         <p>No workout scheduled for this day.</p>
     </div>
 }
+else if (workout.Modifier == WorkoutModifier.Vacation && workout.Type == WorkoutType.Rest)
+{
+    <div class="card mt-3" style="border-color: #0277BD;">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-umbrella-beach fa-3x mb-3" style="color: #0277BD;"></i>
+            <h4>Vacation — Rest</h4>
+            <p class="text-muted">Enjoy your time off! Your plan will pick back up after vacation.</p>
+        </div>
+    </div>
+}
+else if (workout.Modifier == WorkoutModifier.InjuryReduced && workout.Type == WorkoutType.Rest)
+{
+    <div class="card mt-3" style="border-color: #C62828;">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-band-aid fa-3x mb-3" style="color: #C62828;"></i>
+            <h4>Injury — Rest</h4>
+            <p class="text-muted">Focus on recovery. Your plan will adjust as you heal.</p>
+        </div>
+    </div>
+}
+else if (workout.Modifier == WorkoutModifier.DayOff)
+{
+    <div class="card mt-3" style="border-color: #999;">
+        <div class="card-body text-center py-5">
+            <i class="fas fa-ban fa-3x mb-3" style="color: #999;"></i>
+            <h4>Day Off</h4>
+            <p class="text-muted">You marked this day off. Rest up.</p>
+        </div>
+    </div>
+}
 else if (workout.Type == WorkoutType.Rest)
 {
     <div class="card mt-3">
@@ -50,8 +80,22 @@ else
 {
     <div class="card mt-3">
         <div class="card-header d-flex justify-content-between align-items-center"
-             style="background-color: @WorkoutColors.Get(workout.Type); color: @WorkoutColors.GetText(workout.Type);">
-            <h5 class="mb-0">@workout.Type</h5>
+             style="background-color: @(workout.Modifier != WorkoutModifier.None ? WorkoutColors.GetModifier(workout.Modifier) : WorkoutColors.Get(workout.Type)); color: @(workout.Modifier != WorkoutModifier.None ? WorkoutColors.GetModifierText(workout.Modifier) : WorkoutColors.GetText(workout.Type));">
+            <h5 class="mb-0">
+                @if (workout.Modifier != WorkoutModifier.None)
+                {
+                    <i class="@WorkoutColors.GetModifierIcon(workout.Modifier) me-2"></i>
+                }
+                @workout.Type
+                @if (workout.Modifier == WorkoutModifier.Vacation)
+                {
+                    <small class="ms-2">(vacation)</small>
+                }
+                else if (workout.Modifier == WorkoutModifier.InjuryReduced)
+                {
+                    <small class="ms-2">(reduced)</small>
+                }
+            </h5>
             <span class="fs-4 fw-bold">@workout.TargetDistanceMiles.ToString("F1") mi</span>
         </div>
         <div class="card-body">

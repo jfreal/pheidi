@@ -20,7 +20,7 @@ builder.Services.AddDataProtection()
 
 builder.Services.AddDbContextFactory<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")
-        ?? "Data Source=pheidi.db"));
+        ?? @"Data Source=C:\PhediDb\pheidi.db"));
 
 builder.Services.AddScoped<PlanStateService>();
 builder.Services.AddScoped<PaceCalculator>();
@@ -37,6 +37,7 @@ builder.Services.AddSingleton<ScheduleFlexibilityEngine>();
 
 var app = builder.Build();
 
+Directory.CreateDirectory(@"C:\PhediDb");
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
