@@ -204,6 +204,20 @@ else
                 <i class="fas fa-calendar-day me-1"></i>Daily
             </a>
         </li>
+        <li class="nav-item ms-auto d-flex gap-1 align-items-center">
+            @if (activeInjury == null && !showInjuryFlow)
+            {
+                <button class="btn btn-sm btn-outline-warning py-0 px-2 bg-white" @onclick="() => showInjuryFlow = true">
+                    <i class="fas fa-band-aid me-1" style="font-size: 0.7rem;"></i>Injury
+                </button>
+            }
+            @if (!showVacation)
+            {
+                <button class="btn btn-sm btn-outline-info py-0 px-2 bg-white" @onclick="() => showVacation = true">
+                    <i class="fas fa-umbrella-beach me-1" style="font-size: 0.7rem;"></i>Vacation
+                </button>
+            }
+        </li>
     </ul>
 
     @switch (currentView)
@@ -228,22 +242,7 @@ else
             break;
     }
 
-    @* --- Discreet action links --- *@
-    <div class="mt-4 d-flex justify-content-between align-items-center">
-        <div class="d-flex gap-3">
-            @if (activeInjury == null && !showInjuryFlow)
-            {
-                <button class="btn btn-sm btn-link text-muted" @onclick="() => showInjuryFlow = true">
-                    <i class="fas fa-band-aid me-1"></i>Report an injury
-                </button>
-            }
-            @if (!showVacation)
-            {
-                <button class="btn btn-sm btn-link text-muted" @onclick="() => showVacation = true">
-                    <i class="fas fa-umbrella-beach me-1"></i>Schedule vacation
-                </button>
-            }
-        </div>
+    <div class="mt-3 d-flex justify-content-end">
         <div class="dropdown">
             <button class="btn btn-sm btn-link text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
                 <i class="fas fa-ellipsis-h me-1"></i>Plan Options

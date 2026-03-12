@@ -5,50 +5,36 @@
 @inject NavigationManager Navigation
 @inject IJSRuntime JS
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-download me-2"></i>Export & Share</h5>
+<div class="d-flex align-items-center gap-2 flex-wrap small">
+    <span class="text-muted" style="font-size: 0.8rem;"><i class="fas fa-download me-1"></i>Export:</span>
+    <button class="btn btn-sm btn-outline-primary py-0 px-2" @onclick="DownloadIcs" title="Download .ics file">
+        <i class="fas fa-calendar-alt me-1"></i>.ics
+    </button>
+    <button class="btn btn-sm btn-outline-info py-0 px-2" @onclick="DownloadPdf" title="Download PDF">
+        <i class="fas fa-file-pdf me-1"></i>PDF
+    </button>
+    <button class="btn btn-sm btn-outline-secondary py-0 px-2" @onclick="PrintPlan" title="Print">
+        <i class="fas fa-print"></i>
+    </button>
+
+    <span class="text-muted ms-2" style="font-size: 0.8rem;">Share:</span>
+    <div class="input-group input-group-sm" style="width: auto; max-width: 220px;">
+        <input type="text" class="form-control form-control-sm py-0" value="@subscribeUrl" readonly style="font-size: 0.75rem;" />
+        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="CopySubscribeUrl" title="Copy subscribe URL">
+            <i class="fas fa-copy"></i>
+        </button>
     </div>
-    <div class="card-body">
-        <div class="d-grid gap-2">
-            <button class="btn btn-outline-primary" @onclick="DownloadIcs">
-                <i class="fas fa-calendar-alt me-2"></i>Download .ics File
-            </button>
-
-            <div class="input-group">
-                <input type="text" class="form-control" value="@subscribeUrl" readonly />
-                <button class="btn btn-outline-secondary" @onclick="CopySubscribeUrl">
-                    <i class="fas fa-copy"></i>
-                </button>
-            </div>
-            <small class="text-muted">Subscribe to this URL in your calendar app for live updates.</small>
-
-            @if (showCopied)
-            {
-                <div class="alert alert-success py-1 text-center">Copied to clipboard!</div>
-            }
-
-            <hr />
-
-            <div class="input-group">
-                <input type="text" class="form-control" value="@shareUrl" readonly />
-                <button class="btn btn-outline-secondary" @onclick="CopyShareUrl">
-                    <i class="fas fa-share-alt"></i>
-                </button>
-            </div>
-            <small class="text-muted">Share a read-only view of your plan.</small>
-
-            <hr />
-
-            <button class="btn btn-outline-secondary" @onclick="PrintPlan">
-                <i class="fas fa-print me-2"></i>Print Plan
-            </button>
-
-            <button class="btn btn-outline-info" @onclick="DownloadPdf">
-                <i class="fas fa-file-pdf me-2"></i>Download PDF
-            </button>
-        </div>
+    <div class="input-group input-group-sm" style="width: auto; max-width: 220px;">
+        <input type="text" class="form-control form-control-sm py-0" value="@shareUrl" readonly style="font-size: 0.75rem;" />
+        <button class="btn btn-sm btn-outline-secondary py-0" @onclick="CopyShareUrl" title="Copy share URL">
+            <i class="fas fa-share-alt"></i>
+        </button>
     </div>
+
+    @if (showCopied)
+    {
+        <span class="text-success small"><i class="fas fa-check me-1"></i>Copied!</span>
+    }
 </div>
 
 @code {
