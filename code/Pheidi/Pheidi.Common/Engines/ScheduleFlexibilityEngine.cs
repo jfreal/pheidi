@@ -122,17 +122,37 @@ public class ScheduleFlexibilityEngine
     /// </summary>
     public void ReflowRemainingWeeks(NewTrainingPlan plan, DayOfWeek[] newAvailableDays)
     {
-        var engine = new PlanGenerationEngine();
+        ReflowRemainingWeeks(plan, newAvailableDays, TransitionTimePreset.None);
+    }
+
+    /// <summary>
+    /// Task 10.4: Reflows remaining weeks respecting transition time when redistributing.
+    /// </summary>
+    public void ReflowRemainingWeeks(NewTrainingPlan plan, DayOfWeek[] newAvailableDays, TransitionTimePreset transitionPreset)
+    {
         var today = DateTime.Today;
 
         foreach (var week in plan.Weeks)
         {
-            // Skip completed weeks (all workouts in the past or completed)
             if (week.Workouts.All(w => w.Date.Date < today || w.Status == WorkoutStatus.Completed))
                 continue;
 
-            // Redistribute workouts for future weeks based on new available days
             RedistributeWeek(week, newAvailableDays);
+
+            // Re-apply transition time durations after redistribution
+            if (transitionPreset != TransitionTimePreset.None)
+            {
+                var transitionMinutes = transitionPreset.Minutes();
+                foreach (var workout in week.Workouts.Where(w => w.IsRunWorkout && w.Status != WorkoutStatus.Completed))
+                {
+                    var paceMinPerMile = workout.IsQualityWorkout ? 9m : 10m;
+                    var runMinutes = workout.TargetDistanceMiles * paceMinPerMile;
+                    var warmUpMin = workout.WarmUpDuration?.TotalMinutes ?? 0;
+                    var coolDownMin = workout.CoolDownDuration?.TotalMinutes ?? 0;
+                    var totalMinutes = (int)(runMinutes + (decimal)warmUpMin + (decimal)coolDownMin + transitionMinutes);
+                    workout.TargetDuration = TimeSpan.FromMinutes(totalMinutes);
+                }
+            }
         }
     }
 
@@ -177,8 +197,9 @@ public class ScheduleFlexibilityEngine
     /// <summary>
     /// Compresses a week to fit fewer available days.
     /// Preserves long run + quality sessions, drops easy/recovery runs first.
+    /// Task 2.4: Uses VolumeMode max run days as the cap.
     /// </summary>
-    public static void CompressWeek(TrainingWeek week, DayOfWeek[] availableDays)
+    public static void CompressWeek(TrainingWeek week, DayOfWeek[] availableDays, VolumeMode? volumeMode = null)
     {
         var available = new HashSet<DayOfWeek>(availableDays);
         var futureWorkouts = week.Workouts
@@ -190,7 +211,12 @@ public class ScheduleFlexibilityEngine
             .OrderBy(w => w.Date)
             .ToList();
 
-        if (futureWorkouts.Count <= availableSlots.Count)
+        // Task 2.4: Cap run days by VolumeMode if provided
+        var maxSlots = volumeMode.HasValue
+            ? Math.Min(availableSlots.Count, volumeMode.Value.MaxRunDaysPerWeek())
+            : availableSlots.Count;
+
+        if (futureWorkouts.Count <= maxSlots)
             return; // Enough room, no compression needed
 
         // Rank workouts by priority: long run > quality > easy/recovery
@@ -199,8 +225,8 @@ public class ScheduleFlexibilityEngine
             .ToList();
 
         // Keep only as many as we have slots
-        var keep = ranked.Take(availableSlots.Count).ToList();
-        var drop = ranked.Skip(availableSlots.Count).ToList();
+        var keep = ranked.Take(maxSlots).ToList();
+        var drop = ranked.Skip(maxSlots).ToList();
 
         // Convert dropped workouts to rest
         foreach (var w in drop)

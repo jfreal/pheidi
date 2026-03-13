@@ -1,6 +1,7 @@
 @using Pheidi.Blazor.Components.Shared
 @using Pheidi.Blazor.Components.Shared.Logging
 @using Pheidi.Blazor.Services
+@using Pheidi.Common.Engines
 @using Pheidi.Common.Services
 @inject WorkoutRepository WorkoutRepo
 @inject PaceCalculator PaceCalc
@@ -96,9 +97,24 @@ else
                     <small class="ms-2">(reduced)</small>
                 }
             </h5>
-            <span class="fs-4 fw-bold">@workout.TargetDistanceMiles.ToString("F1") mi</span>
+            <span class="fs-4 fw-bold">
+                @workout.TargetDistanceMiles.ToString("F1") mi
+                @if (workout.TargetDuration.HasValue)
+                {
+                    <small class="ms-2 fw-normal" style="font-size: 0.7em;">~@((int)workout.TargetDuration.Value.TotalMinutes) min</small>
+                }
+            </span>
         </div>
         <div class="card-body">
+            @if (IsSpikeWorkout(workout))
+            {
+                <div class="alert alert-warning py-2 mb-3">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    <strong>Spike warning:</strong> This workout exceeds 110% of your longest completed run in the past 30 days.
+                    Consider reducing the distance or splitting into two sessions.
+                </div>
+            }
+
             @if (workout.Status == WorkoutStatus.Completed)
             {
                 <div class="alert alert-success py-2 mb-3">
@@ -312,6 +328,23 @@ else
         var zone = PaceCalc.GetPaceZone(workout.PaceZone.Zone, profile.VdotValue.Value);
         if (zone.MinPacePerMile == null || zone.MaxPacePerMile == null) return null;
         return $"Pace: {PaceCalculator.FormatPace(zone.MinPacePerMile.Value)} - {PaceCalculator.FormatPace(zone.MaxPacePerMile.Value)} /mile";
+    }
+
+    private bool IsSpikeWorkout(ScheduledWorkout workout)
+    {
+        if (!workout.IsRunWorkout || workout.Status != WorkoutStatus.Pending) return false;
+
+        var recentCompleted = Plan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Where(w => w.Status == WorkoutStatus.Completed
+                && w.IsRunWorkout
+                && w.ActualDistanceMiles.HasValue
+                && w.Date.Date >= DateTime.Today.AddDays(-30)
+                && w.Date.Date <= DateTime.Today)
+            .Select(w => w.ActualDistanceMiles!.Value)
+            .ToArray();
+
+        return SpikeGuard.IsSpike(workout.TargetDistanceMiles, recentCompleted);
     }
 
     private static string GetCoachingNote(WorkoutType type) => type switch

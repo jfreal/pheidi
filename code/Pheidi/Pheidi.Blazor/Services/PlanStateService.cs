@@ -89,6 +89,83 @@ public class PlanStateService
     public bool HasActivePlan => ActivePlan is { Status: PlanStatus.Active };
     public bool HasPausedPlan => ActivePlan is { Status: PlanStatus.Paused };
 
+    /// <summary>
+    /// Task 11.1: Count consecutive completed scheduled workout days from today backward.
+    /// </summary>
+    public static int CalculateCurrentStreak(NewTrainingPlan plan)
+    {
+        var today = DateTime.Today;
+        var completedDates = plan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Where(w => w.Status == WorkoutStatus.Completed && w.IsRunWorkout)
+            .Select(w => w.Date.Date)
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+
+        if (completedDates.Count == 0) return 0;
+
+        int streak = 0;
+        // Start from the most recent completed date
+        var checkDate = completedDates[0];
+        // Only count if the most recent completed date is today or yesterday
+        if ((today - checkDate).TotalDays > 1) return 0;
+
+        foreach (var date in completedDates)
+        {
+            if (date == checkDate)
+            {
+                streak++;
+                checkDate = checkDate.AddDays(-1);
+            }
+            else break;
+        }
+
+        return streak;
+    }
+
+    /// <summary>
+    /// Task 11.2: Scan all completed workouts for longest consecutive run streak.
+    /// </summary>
+    public static int CalculateBestStreak(NewTrainingPlan plan)
+    {
+        var completedDates = plan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Where(w => w.Status == WorkoutStatus.Completed && w.IsRunWorkout)
+            .Select(w => w.Date.Date)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+
+        if (completedDates.Count == 0) return 0;
+
+        int best = 1, current = 1;
+        for (int i = 1; i < completedDates.Count; i++)
+        {
+            if ((completedDates[i] - completedDates[i - 1]).TotalDays == 1)
+            {
+                current++;
+                if (current > best) best = current;
+            }
+            else
+            {
+                current = 1;
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Task 11.3: Get total completed workout count for milestone tracking.
+    /// </summary>
+    public static int GetTotalCompletedWorkouts(NewTrainingPlan plan)
+    {
+        return plan.Weeks
+            .SelectMany(w => w.Workouts)
+            .Count(w => w.Status == WorkoutStatus.Completed && w.IsRunWorkout);
+    }
+
     public bool IsOnboardingComplete =>
         RaceGoal.RaceDate > DateTime.Today &&
         UserProfile.AvailableDays.Length >= 3;

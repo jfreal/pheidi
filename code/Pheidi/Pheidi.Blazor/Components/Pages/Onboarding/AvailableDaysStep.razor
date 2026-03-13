@@ -44,6 +44,17 @@ else
     </div>
 }
 
+<div class="mt-4">
+    <label class="form-label fw-semibold">Transition Time</label>
+    <p class="text-muted small mb-2">How much time do you need for shower/commute around workouts?</p>
+    <select class="form-select" style="max-width: 350px;" @bind="Profile.TransitionTimePreset">
+        @foreach (var preset in Enum.GetValues<TransitionTimePreset>())
+        {
+            <option value="@preset">@preset.Description()</option>
+        }
+    </select>
+</div>
+
 @code {
     [Parameter, EditorRequired]
     public UserProfile Profile { get; set; } = default!;

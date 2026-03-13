@@ -7,15 +7,18 @@ public class WorkoutLoggingService
 {
     /// <summary>
     /// Quick-complete: mark workout as done with planned values.
+    /// Task 9.3: Auto-assign ActualIntensityZone based on workout type.
     /// </summary>
     public void QuickComplete(ScheduledWorkout workout)
     {
         workout.Status = WorkoutStatus.Completed;
         workout.ActualDistanceMiles = workout.TargetDistanceMiles;
+        workout.ActualIntensityZone = IntensityTrackingService.MapEffortToZone(null, workout.Type);
     }
 
     /// <summary>
     /// Manual entry: log actual values for a workout.
+    /// Task 9.4: Map ActualEffort to ActualIntensityZone.
     /// </summary>
     public void LogWorkout(ScheduledWorkout workout, decimal? distance, TimeSpan? duration, int? effort)
     {
@@ -23,6 +26,7 @@ public class WorkoutLoggingService
         workout.ActualDistanceMiles = distance;
         workout.ActualDuration = duration;
         workout.ActualEffort = effort;
+        workout.ActualIntensityZone = IntensityTrackingService.MapEffortToZone(effort, workout.Type);
     }
 
     /// <summary>

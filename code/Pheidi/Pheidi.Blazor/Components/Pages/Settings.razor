@@ -76,6 +76,17 @@ else
                     </select>
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Volume Mode</label>
+                    <select class="form-select" @bind="profile.VolumeMode">
+                        @foreach (var mode in Enum.GetValues<VolumeMode>())
+                        {
+                            <option value="@mode">@mode</option>
+                        }
+                    </select>
+                    <small class="text-muted">@profile.VolumeMode.Description()</small>
+                </div>
+
                 <div class="row g-3 mb-3">
                     <div class="col-6">
                         <label class="form-label fw-semibold">Current Weekly Mileage</label>
@@ -88,6 +99,36 @@ else
                                @bind="profile.RunningExperienceMonths" placeholder="optional" />
                     </div>
                 </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Date of Birth</label>
+                    <input type="date" class="form-control" @bind="profile.DateOfBirth" />
+                    @if (profile.DateOfBirth.HasValue)
+                    {
+                        var ageGroup = AgeGroupExtensions.GetAgeGroup(profile.DateOfBirth);
+                        <small class="text-muted">Age bracket: @ageGroup.DisplayName()</small>
+                    }
+                </div>
+
+                @if (profile.ExperienceLevel == ExperienceLevel.Beginner)
+                {
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Run/Walk Intervals</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label small">Run (minutes)</label>
+                                <input type="number" class="form-control" min="1" max="30"
+                                       @bind="profile.RunWalkRunMinutes" placeholder="4" />
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small">Walk (minutes)</label>
+                                <input type="number" class="form-control" min="1" max="10"
+                                       @bind="profile.RunWalkWalkMinutes" placeholder="1" />
+                            </div>
+                        </div>
+                        <small class="text-muted">Leave blank for automatic progression (4:1 → 6:1 → 8:1)</small>
+                    </div>
+                }
             </div>
         </div>
 
@@ -127,6 +168,17 @@ else
                             </button>
                         }
                     </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Transition Time</label>
+                    <select class="form-select" @bind="profile.TransitionTimePreset">
+                        @foreach (var preset in Enum.GetValues<TransitionTimePreset>())
+                        {
+                            <option value="@preset">@preset.Description()</option>
+                        }
+                    </select>
+                    <small class="text-muted">Time for shower/commute before and after workouts</small>
                 </div>
 
                 @if (PlanState.HasActivePlan)

@@ -31,6 +31,22 @@
     }
 </div>
 
+<div class="mt-4">
+    <label class="form-label fw-semibold">Date of Birth <span class="text-muted fw-normal">(optional)</span></label>
+    <input type="date" class="form-control" style="max-width: 250px;" @bind="Profile.DateOfBirth" />
+    @if (Profile.DateOfBirth.HasValue)
+    {
+        var ageGroup = AgeGroupExtensions.GetAgeGroup(Profile.DateOfBirth);
+        <small class="text-muted d-block mt-1">
+            Age bracket: <strong>@ageGroup.DisplayName()</strong> — your plan will include age-appropriate recovery and warm-ups.
+        </small>
+    }
+    else
+    {
+        <small class="text-muted">Helps us adjust recovery windows and warm-up times.</small>
+    }
+</div>
+
 @code {
     [Parameter, EditorRequired]
     public UserProfile Profile { get; set; } = default!;

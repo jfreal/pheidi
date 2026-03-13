@@ -1,0 +1,81 @@
+@using Pheidi.Common.Services
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Intensity Distribution (4 weeks)</h6>
+        <button class="btn btn-sm btn-link p-0" @onclick="() => expanded = !expanded">
+            <i class="fas @(expanded ? "fa-chevron-up" : "fa-chevron-down")"></i>
+        </button>
+    </div>
+    @if (expanded)
+    {
+        <div class="card-body">
+            @if (CompletedWorkouts.Count == 0)
+            {
+                <p class="text-muted small mb-0">Complete some workouts to see your intensity distribution.</p>
+            }
+            else
+            {
+                var (easy, threshold, hard) = IntensityTrackingService.GetDistribution(CompletedWorkouts);
+
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Easy</span>
+                        <span class="fw-bold">@easy% <span class="text-muted fw-normal">(target: 80%)</span></span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: @easy%;">@easy%</div>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Threshold</span>
+                        <span class="fw-bold @(threshold > 20 ? "text-warning" : "")">@threshold%</span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-warning" style="width: @threshold%;">@threshold%</div>
+                    </div>
+                </div>
+
+                <div class="mb-2">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>Hard</span>
+                        <span class="fw-bold">@hard% <span class="text-muted fw-normal">(target: 20%)</span></span>
+                    </div>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-danger" style="width: @hard%;">@hard%</div>
+                    </div>
+                </div>
+
+                @if (IntensityTrackingService.IsInGrayZone(CompletedWorkouts))
+                {
+                    <div class="alert alert-warning py-2 mt-3 mb-0 small">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        @IntensityTrackingService.GetGrayZoneNudge()
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public List<ScheduledWorkout> CompletedWorkouts { get; set; } = new();
+
+    private bool expanded = false;
+    private bool autoExpandChecked = false;
+
+    protected override void OnParametersSet()
+    {
+        if (autoExpandChecked) return;
+        autoExpandChecked = true;
+
+        // Auto-expand when user has meaningful data (~2 runs/week for 4 weeks)
+        var recentRuns = CompletedWorkouts
+            .Count(w => w.IsRunWorkout && w.Date.Date >= DateTime.Today.AddDays(-28));
+        if (recentRuns >= 8)
+            expanded = true;
+    }
+}

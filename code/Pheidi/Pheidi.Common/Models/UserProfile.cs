@@ -12,4 +12,11 @@ public class UserProfile
     public decimal? VdotValue { get; set; }
     public decimal? CurrentWeeklyMileage { get; set; }
     public int? RunningExperienceMonths { get; set; }
+
+    // Tier 2 features
+    public DateTime? DateOfBirth { get; set; }
+    public VolumeMode VolumeMode { get; set; } = VolumeMode.Moderate;
+    public TransitionTimePreset TransitionTimePreset { get; set; } = TransitionTimePreset.None;
+    public int? RunWalkRunMinutes { get; set; }
+    public int? RunWalkWalkMinutes { get; set; }
 }

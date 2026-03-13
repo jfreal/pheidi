@@ -49,6 +49,14 @@ public class ScheduledWorkout
     public int? ReadinessScore { get; set; }
     public WorkoutModifier Modifier { get; set; } = WorkoutModifier.None;
 
+    // Run/walk intervals
+    public bool IsRunWalk { get; set; }
+    public int? RunMinutes { get; set; }
+    public int? WalkMinutes { get; set; }
+
+    // Intensity tracking
+    public IntensityZone? ActualIntensityZone { get; set; }
+
     public string Description => Modifier switch
     {
         WorkoutModifier.Vacation when Type == WorkoutType.Rest => "Vacation — Rest",
@@ -59,9 +67,11 @@ public class ScheduledWorkout
         _ => Type switch
         {
             WorkoutType.Rest => "Rest Day",
+            WorkoutType.Easy when IsRunWalk => $"Easy Run — {TargetDistanceMiles:F1} mi · Run {RunMinutes}min / Walk {WalkMinutes}min",
             WorkoutType.Easy => $"Easy Run — {TargetDistanceMiles:F1} mi",
             WorkoutType.Tempo => $"Tempo Run — {TargetDistanceMiles:F1} mi",
             WorkoutType.Intervals => $"Intervals — {TargetDistanceMiles:F1} mi",
+            WorkoutType.LongRun when IsRunWalk => $"Long Run — {TargetDistanceMiles:F1} mi · Run {RunMinutes}min / Walk {WalkMinutes}min",
             WorkoutType.LongRun => $"Long Run — {TargetDistanceMiles:F1} mi",
             WorkoutType.Recovery => $"Recovery Run — {TargetDistanceMiles:F1} mi",
             WorkoutType.Fartlek => $"Fartlek — {TargetDistanceMiles:F1} mi",

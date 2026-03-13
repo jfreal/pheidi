@@ -186,16 +186,18 @@ public class PlanGenerationEngineTests
         var profile = new UserProfile
         {
             ExperienceLevel = ExperienceLevel.Beginner,
+            VolumeMode = VolumeMode.Moderate,
             AvailableDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
                              DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday]
         };
 
         var plan = _engine.Generate(goal, profile);
 
+        // VolumeMode.Moderate allows up to 5 run days per week
         foreach (var week in plan.Weeks)
         {
-            Assert.IsTrue(week.RunDayCount <= 4,
-                $"Week {week.WeekNumber}: Beginner should have max 4 run days, got {week.RunDayCount}");
+            Assert.IsTrue(week.RunDayCount <= 5,
+                $"Week {week.WeekNumber}: Moderate volume should have max 5 run days, got {week.RunDayCount}");
         }
     }
 
@@ -241,5 +243,136 @@ public class PlanGenerationEngineTests
         var plan = _engine.Generate(goal, profile);
 
         Assert.AreEqual(PlanStatus.Active, plan.Status);
+    }
+
+    // --- Tier 2 Integration Tests ---
+
+    [TestMethod]
+    public void BeginnerPlanHasRunWalkIntervals()
+    {
+        var goal = new RaceGoal
+        {
+            Distance = RaceDistance.TenK,
+            RaceDate = DateTime.Today.AddDays(12 * 7)
+        };
+        var profile = new UserProfile { ExperienceLevel = ExperienceLevel.Beginner };
+
+        var plan = _engine.Generate(goal, profile);
+
+        var easyWorkouts = plan.Weeks.SelectMany(w => w.Workouts)
+            .Where(w => w.Type is WorkoutType.Easy or WorkoutType.LongRun)
+            .ToList();
+
+        Assert.IsTrue(easyWorkouts.Count > 0, "Should have easy/long run workouts");
+        Assert.IsTrue(easyWorkouts.All(w => w.IsRunWalk), "All easy/long run workouts should be run/walk for beginners");
+        Assert.IsTrue(easyWorkouts.All(w => w.RunMinutes > 0 && w.WalkMinutes > 0), "Run and walk minutes should be set");
+    }
+
+    [TestMethod]
+    public void BeginnerPlanEnforces50PercentIncreaseCap()
+    {
+        var goal = new RaceGoal
+        {
+            Distance = RaceDistance.HalfMarathon,
+            RaceDate = DateTime.Today.AddDays(16 * 7)
+        };
+        var profile = new UserProfile { ExperienceLevel = ExperienceLevel.Beginner };
+
+        var plan = _engine.Generate(goal, profile);
+
+        var longRuns = plan.Weeks
+            .Where(w => w.Phase != TrainingPhase.Taper)
+            .Select(w => w.Workouts.Where(wo => wo.Type == WorkoutType.LongRun).Max(wo => wo.TargetDistanceMiles))
+            .Where(d => d > 0)
+            .ToList();
+
+        for (int i = 1; i < longRuns.Count; i++)
+        {
+            if (longRuns[i - 1] > 0)
+            {
+                Assert.IsTrue(longRuns[i] <= longRuns[i - 1] * 1.51m, // tiny tolerance for rounding
+                    $"Week {i + 1} long run ({longRuns[i]}) exceeds 150% of week {i} ({longRuns[i - 1]})");
+            }
+        }
+    }
+
+    [TestMethod]
+    public void AgeAdjustedPlanHasExtendedWarmUps()
+    {
+        var goal = new RaceGoal
+        {
+            Distance = RaceDistance.HalfMarathon,
+            RaceDate = DateTime.Today.AddDays(16 * 7)
+        };
+        var profile = new UserProfile
+        {
+            ExperienceLevel = ExperienceLevel.Intermediate,
+            DateOfBirth = DateTime.Today.AddYears(-55) // Age 55 → Fifties bracket
+        };
+
+        var plan = _engine.Generate(goal, profile);
+
+        var qualityWorkouts = plan.Weeks.SelectMany(w => w.Workouts)
+            .Where(w => w.WarmUpDuration.HasValue)
+            .ToList();
+
+        if (qualityWorkouts.Count > 0)
+        {
+            Assert.IsTrue(qualityWorkouts.All(w => w.WarmUpDuration!.Value.TotalMinutes >= 12),
+                "Fifties age group should have at least 12-minute warm-ups");
+        }
+    }
+
+    [TestMethod]
+    public void ElitePlanHasDoubleRunDays()
+    {
+        var goal = new RaceGoal
+        {
+            Distance = RaceDistance.FullMarathon,
+            RaceDate = DateTime.Today.AddDays(18 * 7)
+        };
+        var profile = new UserProfile
+        {
+            ExperienceLevel = ExperienceLevel.Advanced,
+            VolumeMode = VolumeMode.Elite,
+            AvailableDays = [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday,
+                             DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday]
+        };
+
+        var plan = _engine.Generate(goal, profile);
+
+        // Elite mode should produce some days with double runs (> 7 run workouts in build/peak weeks)
+        var buildPeakWeeks = plan.Weeks.Where(w => w.Phase is TrainingPhase.Build or TrainingPhase.Peak).ToList();
+        var hasDoubles = buildPeakWeeks.Any(w => w.Workouts.Count(wo => wo.IsRunWorkout) > 7);
+
+        Assert.IsTrue(hasDoubles || buildPeakWeeks.Count == 0,
+            "Elite volume mode should produce double-run days in build/peak weeks");
+    }
+
+    [TestMethod]
+    public void TransitionTimeSetsDuration()
+    {
+        var goal = new RaceGoal
+        {
+            Distance = RaceDistance.TenK,
+            RaceDate = DateTime.Today.AddDays(12 * 7)
+        };
+        var profile = new UserProfile
+        {
+            ExperienceLevel = ExperienceLevel.Intermediate,
+            TransitionTimePreset = TransitionTimePreset.GymShower // 25 min
+        };
+
+        var plan = _engine.Generate(goal, profile);
+
+        var runWorkouts = plan.Weeks.SelectMany(w => w.Workouts)
+            .Where(w => w.IsRunWorkout)
+            .ToList();
+
+        Assert.IsTrue(runWorkouts.Count > 0, "Should have run workouts");
+        Assert.IsTrue(runWorkouts.All(w => w.TargetDuration.HasValue),
+            "All run workouts should have TargetDuration set when transition time is configured");
+        Assert.IsTrue(runWorkouts.All(w => w.TargetDuration!.Value.TotalMinutes >= 25),
+            "All workout durations should include at least the transition time");
     }
 }

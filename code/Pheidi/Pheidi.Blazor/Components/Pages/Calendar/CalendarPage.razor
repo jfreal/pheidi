@@ -118,17 +118,42 @@ else
         </div>
     }
 
-    @* --- Milestone/streak banner --- *@
+    @* --- ACWR badge (tasks 8.4-8.5) --- *@
+    @if (GetAcwrValue() is { } acwrVal)
+    {
+        var zone = AcwrCalculator.ClassifyRisk(acwrVal);
+        <div class="d-flex align-items-center gap-2 mt-3 mb-2">
+            <span class="badge" style="background-color: @AcwrCalculator.GetRiskColor(zone); font-size: 0.85rem;">
+                ACWR: @acwrVal.ToString("F2")
+            </span>
+            <span class="small text-muted">@AcwrCalculator.GetRiskMessage(zone)</span>
+        </div>
+    }
+    else if (GetAllCompletedWorkouts().Count > 0)
+    {
+        <div class="small text-muted mt-3 mb-2">
+            <i class="fas fa-chart-line me-1"></i>ACWR: Building baseline — need ~3 weeks of data
+        </div>
+    }
+
+    @* --- Intensity Dashboard (tasks 9.5-9.7) --- *@
+    <IntensityDashboard CompletedWorkouts="GetAllCompletedWorkouts()" />
+
+    @* --- Milestone/streak banner (tasks 11.4-11.6) --- *@
     @if (GetMilestoneMessage() is { } milestone)
     {
         <div class="alert alert-success mt-3">
             <i class="fas fa-trophy me-2"></i>@milestone
         </div>
     }
-    @if (CalculateStreak() is var streak && streak >= 3)
+    @if (GetCurrentStreak() is var streakVal && streakVal >= 3)
     {
         <div class="small text-muted mt-2 mb-2">
-            <i class="fas fa-fire text-warning me-1"></i>@MessagingService.GetStreakMessage(streak)
+            <i class="fas fa-fire text-warning me-1"></i>@MessagingService.GetStreakMessage(streakVal)
+            @if (streakVal < GetBestStreak())
+            {
+                <span class="ms-2">(Best: @GetBestStreak() days)</span>
+            }
         </div>
     }
 
@@ -550,24 +575,22 @@ else
         return string.IsNullOrEmpty(msg) ? null : msg;
     }
 
-    private int CalculateStreak()
+    private List<ScheduledWorkout> GetAllCompletedWorkouts()
     {
-        if (PlanState.ActivePlan == null) return 0;
-        var allWorkouts = PlanState.ActivePlan.Weeks
+        if (PlanState.ActivePlan == null) return new();
+        return PlanState.ActivePlan.Weeks
             .SelectMany(w => w.Workouts)
-            .Where(w => w.IsRunWorkout)
-            .OrderByDescending(w => w.Date)
+            .Where(w => w.Status == WorkoutStatus.Completed)
             .ToList();
-
-        int streak = 0;
-        foreach (var w in allWorkouts)
-        {
-            if (w.Date.Date > DateTime.Today) continue;
-            if (w.Status == WorkoutStatus.Completed) streak++;
-            else break;
-        }
-        return streak;
     }
+
+    private decimal? GetAcwrValue() => AcwrCalculator.Calculate(GetAllCompletedWorkouts());
+
+    private int GetCurrentStreak() =>
+        PlanState.ActivePlan != null ? PlanStateService.CalculateCurrentStreak(PlanState.ActivePlan) : 0;
+
+    private int GetBestStreak() =>
+        PlanState.ActivePlan != null ? PlanStateService.CalculateBestStreak(PlanState.ActivePlan) : 0;
 
     private bool IsPlanComplete()
     {

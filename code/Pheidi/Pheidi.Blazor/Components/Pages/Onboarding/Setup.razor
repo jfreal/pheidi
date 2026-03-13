@@ -67,12 +67,15 @@
                     }
                     break;
                 case 2:
-                    <PacePreferenceStep Profile="PlanState.UserProfile" />
+                    <VolumeModeStep Profile="PlanState.UserProfile" />
                     break;
                 case 3:
-                    <AvailableDaysStep Profile="PlanState.UserProfile" OnChanged="StateHasChanged" />
+                    <PacePreferenceStep Profile="PlanState.UserProfile" />
                     break;
                 case 4:
+                    <AvailableDaysStep Profile="PlanState.UserProfile" OnChanged="StateHasChanged" />
+                    break;
+                case 5:
                     <PlanGenerationStep RaceGoal="PlanState.RaceGoal" Profile="PlanState.UserProfile" OnGenerate="GeneratePlan" />
                     break;
             }
@@ -96,7 +99,7 @@
 @code {
     private int currentStep = 0;
     private bool includeBaseBuilding;
-    private readonly string[] stepNames = ["Race Goal", "Experience", "Pace", "Schedule", "Generate"];
+    private readonly string[] stepNames = ["Race Goal", "Experience", "Volume", "Pace", "Schedule", "Generate"];
 
     protected override void OnInitialized()
     {
@@ -122,9 +125,10 @@
     private bool CanAdvance() => currentStep switch
     {
         0 => PlanState.RaceGoal.RaceDate > DateTime.Today,
-        1 => true,
-        2 => true,
-        3 => PlanState.UserProfile.AvailableDays.Length >= 3
+        1 => true, // Experience
+        2 => true, // Volume
+        3 => true, // Pace
+        4 => PlanState.UserProfile.AvailableDays.Length >= 3
              && PlanState.UserProfile.AvailableDays.Contains(PlanState.UserProfile.PreferredLongRunDay),
         _ => true
     };
