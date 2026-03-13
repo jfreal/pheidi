@@ -1,0 +1,844 @@
+/* =========================================
+   Pheidi Marketing Site — Custom Styles
+   ========================================= */
+
+:root {
+  --pheidi-primary: #46B39D;
+  --pheidi-primary-dark: #3a9683;
+  --pheidi-accent: #E37332;
+  --pheidi-accent-dark: #c9612a;
+  --pheidi-dark: #272c30;
+  --pheidi-dark-lighter: #334752;
+  --pheidi-bg: #f7fafc;
+  --pheidi-bg-alt: #eef3f7;
+  --pheidi-white: #ffffff;
+  --pheidi-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  --pheidi-shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --pheidi-radius: 0.75rem;
+}
+
+/* ---- Base ---- */
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 80px;
+}
+
+body {
+  font-family: 'Lato', 'Helvetica Neue', Arial, sans-serif;
+  color: var(--pheidi-dark);
+  background: var(--pheidi-white);
+  line-height: 1.7;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 700;
+}
+
+/* ---- Navbar ---- */
+.navbar {
+  background: rgba(39, 44, 48, 0.95);
+  backdrop-filter: blur(8px);
+  padding: 0.75rem 0;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.navbar.scrolled {
+  background: rgba(39, 44, 48, 0.98);
+  box-shadow: var(--pheidi-shadow);
+}
+
+.navbar-brand {
+  font-family: 'Roboto', sans-serif;
+  font-size: 1.4rem;
+  color: var(--pheidi-primary) !important;
+}
+
+.nav-link {
+  font-weight: 400;
+  padding: 0.5rem 1rem !important;
+  transition: color 0.2s;
+}
+
+.nav-link:hover,
+.nav-link.active {
+  color: var(--pheidi-primary) !important;
+}
+
+/* ---- Buttons ---- */
+.btn-pheidi {
+  background: var(--pheidi-primary);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.8rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: 0.02em;
+  transition: background 0.25s, transform 0.15s, box-shadow 0.25s;
+}
+
+.btn-pheidi:hover {
+  background: var(--pheidi-primary-dark);
+  color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(70, 179, 157, 0.35);
+}
+
+.btn-pheidi.btn-lg {
+  padding: 0.85rem 2.4rem;
+  font-size: 1.15rem;
+}
+
+/* ---- Section Defaults ---- */
+section {
+  padding: 5rem 0;
+}
+
+.section-alt {
+  background: var(--pheidi-bg);
+}
+
+.section-title {
+  font-size: 2.2rem;
+  margin-bottom: 1rem;
+  color: var(--pheidi-dark);
+}
+
+.section-lead {
+  font-size: 1.15rem;
+  color: var(--pheidi-dark-lighter);
+  max-width: 700px;
+  margin: 0 auto 1.5rem;
+}
+
+/* ---- Hero ---- */
+#hero {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, var(--pheidi-dark) 0%, #1a2a32 100%);
+  color: #fff;
+  padding-top: 100px;
+}
+
+.hero-icon {
+  font-size: 3.5rem;
+  color: var(--pheidi-primary);
+}
+
+.hero-title {
+  font-size: 3.2rem;
+  font-weight: 900;
+  line-height: 1.15;
+  margin-bottom: 1.25rem;
+}
+
+.hero-subtitle {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  line-height: 1.6;
+}
+
+.hero-point {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.hero-point i {
+  font-size: 1.5rem;
+  color: var(--pheidi-primary);
+  display: block;
+}
+
+.hero-point p {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+}
+
+/* ---- Problem Section ---- */
+#problem {
+  padding: 6rem 0;
+}
+
+.scenario-card {
+  background: var(--pheidi-bg);
+  border-radius: var(--pheidi-radius);
+  padding: 1.5rem 1rem;
+  text-align: center;
+  height: 100%;
+  transition: transform 0.2s;
+}
+
+.scenario-card:hover {
+  transform: translateY(-3px);
+}
+
+.scenario-card i {
+  font-size: 2rem;
+  color: var(--pheidi-accent);
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-card p {
+  font-size: 0.95rem;
+  margin-bottom: 0;
+  color: var(--pheidi-dark-lighter);
+}
+
+/* ---- How It Works ---- */
+.step-card {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  padding: 2.5rem 1.5rem;
+  box-shadow: var(--pheidi-shadow);
+  height: 100%;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--pheidi-shadow-lg);
+}
+
+.step-number {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--pheidi-primary);
+  color: #fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.step-icon {
+  font-size: 2.5rem;
+  color: var(--pheidi-primary);
+  margin-bottom: 1rem;
+}
+
+.step-card h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.75rem;
+}
+
+.step-card p {
+  font-size: 0.95rem;
+  color: var(--pheidi-dark-lighter);
+}
+
+/* ---- Features ---- */
+#features {
+  padding-top: 5rem;
+}
+
+.feature-block {
+  padding: 4rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.feature-block:last-child {
+  border-bottom: none;
+}
+
+.feature-label {
+  display: inline-block;
+  background: rgba(70, 179, 157, 0.1);
+  color: var(--pheidi-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 50px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.feature-title {
+  font-size: 1.75rem;
+  margin-bottom: 1rem;
+}
+
+.feature-points {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0;
+}
+
+.feature-points li {
+  padding: 0.35rem 0 0.35rem 1.5rem;
+  position: relative;
+  font-size: 0.95rem;
+}
+
+.feature-points li::before {
+  content: '\f00c';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  position: absolute;
+  left: 0;
+  color: var(--pheidi-primary);
+  font-size: 0.8rem;
+  top: 0.55rem;
+}
+
+/* ---- Research Callout ---- */
+.research-callout {
+  background: var(--pheidi-bg);
+  border-left: 4px solid var(--pheidi-primary);
+  border-radius: 0 var(--pheidi-radius) var(--pheidi-radius) 0;
+  padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.research-callout i {
+  color: var(--pheidi-primary);
+  font-size: 1.1rem;
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.research-callout p {
+  font-size: 0.9rem;
+  margin-bottom: 0;
+  color: var(--pheidi-dark-lighter);
+  line-height: 1.6;
+}
+
+.research-callout small {
+  color: #888;
+}
+
+/* ---- Chart Containers ---- */
+.chart-container {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  padding: 1.5rem;
+  box-shadow: var(--pheidi-shadow);
+}
+
+.chart-source {
+  font-size: 0.75rem;
+  color: #999;
+  text-align: center;
+  margin-top: 0.75rem;
+  margin-bottom: 0;
+}
+
+/* ---- Injury Predictor Cards ---- */
+.predictor-card {
+  border-radius: var(--pheidi-radius);
+  padding: 1.25rem;
+  text-align: center;
+  height: 100%;
+}
+
+.predictor-card i {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.predictor-card h5 {
+  font-size: 0.95rem;
+  margin-bottom: 0.5rem;
+}
+
+.predictor-card small {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.predictor-badge {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 50px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.predictor-weak {
+  background: #f0f0f0;
+  color: #999;
+}
+
+.predictor-weak i { color: #ccc; }
+.predictor-weak .predictor-badge { background: #e0e0e0; color: #888; }
+
+.predictor-strong {
+  background: rgba(70, 179, 157, 0.08);
+  color: var(--pheidi-dark);
+  border: 2px solid var(--pheidi-primary);
+}
+
+.predictor-strong i { color: var(--pheidi-primary); }
+.predictor-strong .predictor-badge { background: var(--pheidi-primary); color: #fff; }
+
+/* ---- Level Comparison ---- */
+.level-comparison {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.level-card {
+  background: var(--pheidi-bg);
+  border-radius: var(--pheidi-radius);
+  padding: 1.25rem;
+  flex: 1;
+  min-width: 160px;
+  border: 2px solid transparent;
+}
+
+.level-card h5 {
+  font-size: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--pheidi-primary);
+}
+
+.level-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.level-card ul li {
+  font-size: 0.85rem;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e8e8e8;
+}
+
+.level-card ul li:last-child {
+  border-bottom: none;
+}
+
+.level-card-mid {
+  border-color: var(--pheidi-primary);
+  background: rgba(70, 179, 157, 0.05);
+}
+
+.level-card-adv h5 {
+  color: var(--pheidi-accent);
+}
+
+/* ---- Calendar Preview ---- */
+.calendar-preview {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  box-shadow: var(--pheidi-shadow);
+  overflow: hidden;
+}
+
+.cal-header {
+  background: var(--pheidi-dark);
+  color: #fff;
+  padding: 0.75rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.cal-dots {
+  font-size: 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.cal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 2px;
+}
+
+.cal-day {
+  display: flex;
+  align-items: center;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+}
+
+.cal-day:last-child {
+  border-bottom: none;
+}
+
+.cal-day-name {
+  width: 40px;
+  font-weight: 700;
+  color: var(--pheidi-dark-lighter);
+  flex-shrink: 0;
+}
+
+.cal-event {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  flex-grow: 1;
+}
+
+.cal-easy { background: rgba(76, 175, 80, 0.12); color: #388e3c; }
+.cal-hard { background: rgba(227, 115, 50, 0.12); color: var(--pheidi-accent); }
+.cal-long { background: rgba(70, 179, 157, 0.12); color: var(--pheidi-primary-dark); }
+.cal-cross { background: rgba(33, 150, 243, 0.12); color: #1565c0; }
+.cal-rest { background: #f8f8f8; color: #aaa; }
+
+/* ---- Volume Modes ---- */
+.volume-modes {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  box-shadow: var(--pheidi-shadow);
+  padding: 1.5rem;
+}
+
+.volume-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.volume-row:last-child {
+  margin-bottom: 0;
+}
+
+.volume-label {
+  width: 80px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: var(--pheidi-dark-lighter);
+  flex-shrink: 0;
+}
+
+.volume-bar {
+  display: flex;
+  flex: 1;
+  gap: 3px;
+}
+
+.vb {
+  flex: 1;
+  text-align: center;
+  padding: 0.4rem 0.2rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.vb-easy { background: rgba(76, 175, 80, 0.15); color: #388e3c; }
+.vb-hard { background: rgba(227, 115, 50, 0.15); color: var(--pheidi-accent); }
+.vb-long { background: rgba(70, 179, 157, 0.15); color: var(--pheidi-primary-dark); }
+.vb-cross { background: rgba(33, 150, 243, 0.15); color: #1565c0; }
+.vb-rest { background: #f0f0f0; color: transparent; }
+.vb-double { border: 2px dashed rgba(76, 175, 80, 0.4); }
+
+/* ---- Coaching Comparison ---- */
+.compare-card {
+  border-radius: var(--pheidi-radius);
+  padding: 1.25rem;
+  height: 100%;
+}
+
+.compare-card h5 {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.compare-other {
+  background: #fef5f5;
+  border: 1px solid #fdd;
+}
+
+.compare-other h5 { color: #c0392b; }
+
+.compare-ours {
+  background: #f0faf7;
+  border: 2px solid var(--pheidi-primary);
+}
+
+.compare-ours h5 { color: var(--pheidi-primary); }
+
+.compare-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.compare-bad {
+  background: #fff0e0;
+  color: #e67e22;
+}
+
+.compare-bad i { color: #e67e22; }
+
+.compare-good {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.compare-good i { color: #2e7d32; }
+
+.compare-week {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.cw-day {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.cw-done { background: #c8e6c9; color: #2e7d32; }
+.cw-miss { background: #ffcdd2; color: #c62828; }
+.cw-moved {
+  background: #e8f5e9;
+  color: #2e7d32;
+  width: auto;
+  border-radius: 14px;
+  padding: 0 6px;
+}
+
+.cw-moved small { font-size: 0.55rem; }
+
+/* ---- Science Cards ---- */
+.science-card {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  padding: 1.5rem;
+  box-shadow: var(--pheidi-shadow);
+  height: 100%;
+  transition: transform 0.2s;
+}
+
+.science-card:hover {
+  transform: translateY(-3px);
+}
+
+.science-icon {
+  font-size: 1.75rem;
+  color: var(--pheidi-primary);
+  margin-bottom: 0.75rem;
+}
+
+.science-card h5 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.science-card p {
+  font-size: 0.88rem;
+  color: var(--pheidi-dark-lighter);
+  margin-bottom: 0;
+}
+
+/* ---- Stats ---- */
+.stat-card {
+  background: var(--pheidi-bg);
+  border-radius: var(--pheidi-radius);
+  padding: 1.5rem 1rem;
+  height: 100%;
+}
+
+.stat-card i {
+  font-size: 1.75rem;
+  color: var(--pheidi-primary);
+  margin-bottom: 0.5rem;
+  display: block;
+}
+
+.stat-card h4 {
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+}
+
+.stat-card p {
+  font-size: 0.82rem;
+  color: var(--pheidi-dark-lighter);
+  margin-bottom: 0;
+}
+
+/* ---- Compatibility ---- */
+.compat-card {
+  background: var(--pheidi-white);
+  border-radius: var(--pheidi-radius);
+  box-shadow: var(--pheidi-shadow);
+  padding: 2rem 1.5rem;
+  height: 100%;
+}
+
+.compat-card h5 {
+  margin-bottom: 1.25rem;
+  font-size: 1.05rem;
+}
+
+.compat-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.compat-badge {
+  background: var(--pheidi-bg);
+  border-radius: 50px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--pheidi-dark-lighter);
+}
+
+.compat-badge i {
+  margin-right: 0.25rem;
+  color: var(--pheidi-primary);
+}
+
+/* ---- Final CTA ---- */
+#cta-final {
+  background: linear-gradient(135deg, var(--pheidi-primary) 0%, #3ab5a0 50%, var(--pheidi-primary-dark) 100%);
+  color: #fff;
+  padding: 6rem 0;
+}
+
+.cta-title {
+  font-size: 2.75rem;
+  font-weight: 900;
+  margin-bottom: 1rem;
+}
+
+.cta-subtitle {
+  font-size: 1.15rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 2rem;
+  line-height: 1.7;
+}
+
+#cta-final .btn-pheidi {
+  background: #fff;
+  color: var(--pheidi-primary-dark);
+  font-size: 1.2rem;
+  padding: 0.9rem 2.5rem;
+}
+
+#cta-final .btn-pheidi:hover {
+  background: #f0f0f0;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15);
+}
+
+/* ---- Footer ---- */
+footer {
+  background: var(--pheidi-dark);
+  color: #ccc;
+  padding: 3rem 0 1.5rem;
+}
+
+footer h5 {
+  color: #fff;
+  font-size: 1.05rem;
+  margin-bottom: 1rem;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+}
+
+.footer-links li {
+  margin-bottom: 0.5rem;
+}
+
+.footer-links a {
+  color: #aaa;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.footer-links a:hover {
+  color: var(--pheidi-primary);
+}
+
+/* ---- Scroll Animations ---- */
+.fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 991px) {
+  .hero-title { font-size: 2.4rem; }
+  .section-title { font-size: 1.8rem; }
+  .feature-title { font-size: 1.4rem; }
+  .cta-title { font-size: 2rem; }
+  section { padding: 3.5rem 0; }
+  .feature-block { padding: 2.5rem 0; }
+}
+
+@media (max-width: 767px) {
+  .hero-title { font-size: 2rem; }
+  .hero-subtitle { font-size: 1.05rem; }
+  .section-title { font-size: 1.5rem; }
+  .feature-title { font-size: 1.25rem; }
+  .cta-title { font-size: 1.6rem; }
+  .cta-subtitle { font-size: 1rem; }
+  section { padding: 3rem 0; }
+  .feature-block { padding: 2rem 0; }
+
+  .level-comparison {
+    flex-direction: column;
+  }
+
+  .volume-label {
+    width: 60px;
+    font-size: 0.7rem;
+  }
+
+  .vb {
+    font-size: 0.55rem;
+    padding: 0.3rem 0.1rem;
+  }
+}
+
+@media (max-width: 575px) {
+  .hero-title { font-size: 1.65rem; }
+  #hero { padding-top: 80px; min-height: 90vh; }
+  .btn-pheidi.btn-lg { padding: 0.7rem 1.8rem; font-size: 1rem; }
+}
