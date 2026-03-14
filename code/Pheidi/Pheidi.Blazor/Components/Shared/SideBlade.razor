@@ -1,0 +1,33 @@
+@if (Visible)
+{
+    <div class="position-fixed top-0 start-0 w-100 h-100" style="background: rgba(0,0,0,0.3); z-index: 1040;"
+         @onclick="Close"></div>
+
+    <div class="position-fixed top-0 end-0 h-100 bg-white shadow" style="z-index: 1050; width: 380px; overflow-y: auto;"
+         @onclick:stopPropagation="true">
+        <div class="p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i class="@IconClass me-2"></i>@Title</h5>
+                <button class="btn btn-sm btn-outline-secondary" @onclick="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            @ChildContent
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string IconClass { get; set; } = "fas fa-cog";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(false);
+    }
+}

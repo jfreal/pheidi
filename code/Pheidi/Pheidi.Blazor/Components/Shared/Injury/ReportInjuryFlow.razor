@@ -1,65 +1,58 @@
 @using Pheidi.Common.Engines
 
-<div class="card">
-    <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-band-aid me-2"></i> Report an Injury</h5>
-    </div>
-    <div class="card-body">
-        @if (!submitted)
-        {
-            <div class="mb-3">
-                <label class="form-label fw-bold">Where does it hurt?</label>
-                <div class="d-flex gap-2 flex-wrap">
-                    @foreach (var part in Enum.GetValues<BodyPart>())
-                    {
-                        var p = part;
-                        <button class="btn btn-sm @(selectedBodyPart == p ? "btn-primary" : "btn-outline-secondary")"
-                                @onclick="() => selectedBodyPart = p">
-                            @FormatBodyPart(p)
-                        </button>
-                    }
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">Pain Severity: @severity / 10</label>
-                <input type="range" class="form-range" min="1" max="10" @bind="severity" @bind:event="oninput" />
-                <div class="d-flex justify-content-between small text-muted">
-                    <span>Mild</span>
-                    <span>Moderate</span>
-                    <span>Severe</span>
-                </div>
-            </div>
-
-            <div class="alert @GuidanceAlertClass() mb-3">
-                <i class="fas @GuidanceIcon() me-2"></i>
-                @InjuryEngine.GetGuidance(severity)
-            </div>
-
-            @if (InjuryEngine.ShouldRecommendMedicalClearance(new InjuryReport { Severity = severity }))
+@if (!submitted)
+{
+    <div class="mb-3">
+        <label class="form-label fw-semibold small">Where does it hurt?</label>
+        <div class="d-flex gap-2 flex-wrap">
+            @foreach (var part in Enum.GetValues<BodyPart>())
             {
-                <div class="alert alert-warning">
-                    <i class="fas fa-user-md me-2"></i>
-                    We recommend consulting a healthcare provider for this level of pain.
-                </div>
+                var p = part;
+                <button class="btn btn-sm @(selectedBodyPart == p ? "btn-primary" : "btn-outline-secondary")"
+                        @onclick="() => selectedBodyPart = p">
+                    @FormatBodyPart(p)
+                </button>
             }
-
-            <button class="btn btn-primary" @onclick="Submit">
-                <i class="fas fa-save me-1"></i> Submit Report
-            </button>
-            <button class="btn btn-outline-secondary ms-2" @onclick="() => OnCancel.InvokeAsync()">
-                Cancel
-            </button>
-        }
-        else
-        {
-            <div class="alert alert-info">
-                <i class="fas fa-check-circle me-2"></i>
-                Injury reported. Your upcoming workouts have been adjusted based on severity @severity.
-            </div>
-        }
+        </div>
     </div>
-</div>
+
+    <div class="mb-3">
+        <label class="form-label fw-semibold small">Pain Severity: @severity / 10</label>
+        <input type="range" class="form-range" min="1" max="10" @bind="severity" @bind:event="oninput" />
+        <div class="d-flex justify-content-between small text-muted">
+            <span>Mild</span>
+            <span>Moderate</span>
+            <span>Severe</span>
+        </div>
+    </div>
+
+    <div class="alert @GuidanceAlertClass() mb-3 small">
+        <i class="fas @GuidanceIcon() me-2"></i>
+        @InjuryEngine.GetGuidance(severity)
+    </div>
+
+    @if (InjuryEngine.ShouldRecommendMedicalClearance(new InjuryReport { Severity = severity }))
+    {
+        <div class="alert alert-warning small">
+            <i class="fas fa-user-md me-2"></i>
+            We recommend consulting a healthcare provider for this level of pain.
+        </div>
+    }
+
+    <button class="btn btn-primary" @onclick="Submit">
+        <i class="fas fa-save me-1"></i> Submit Report
+    </button>
+    <button class="btn btn-outline-secondary ms-2" @onclick="() => OnCancel.InvokeAsync()">
+        Cancel
+    </button>
+}
+else
+{
+    <div class="alert alert-info small">
+        <i class="fas fa-check-circle me-2"></i>
+        Injury reported. Your upcoming workouts have been adjusted based on severity @severity.
+    </div>
+}
 
 @code {
     [Parameter]
